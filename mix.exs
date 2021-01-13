@@ -1,17 +1,26 @@
 defmodule Datix.MixProject do
   use Mix.Project
 
+  @github "https://github.com/hrzndhrn/datix"
+
   def project do
     [
       app: :datix,
       version: "0.1.0",
       elixir: "~> 1.11",
+      description: description(),
+      source_url: @github,
       start_permanent: Mix.env() == :prod,
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: preferred_cli_env(),
       dialyzer: dialyzer(),
+      package: package(),
       deps: deps()
     ]
+  end
+
+  def description do
+    "A date-time parser using `Calendar.strftime` format strings."
   end
 
   def application do
@@ -33,6 +42,14 @@ defmodule Datix.MixProject do
     [
       flags: [:unmatched_returns, :error_handling],
       plt_file: {:no_warn, "test/support/plts/dialyzer.plt"}
+    ]
+  end
+
+  defp package do
+    [
+      maintainers: ["Marcus Kruse"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => @github}
     ]
   end
 
