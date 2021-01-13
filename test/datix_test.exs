@@ -219,7 +219,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for cycle in format-string" do
-      assert Datix.strptime("2018/10/17", "%x", preferred_date: "%Y/%x") == {:error, {:cycle, "%x"}}
+      assert Datix.strptime("2018/10/17", "%x", preferred_date: "%Y/%x") ==
+               {:error, {:cycle, "%x"}}
     end
 
     # %X - Preferred time (without date) representation
@@ -306,7 +307,8 @@ defmodule DatixTest do
     end
 
     test "parses with format-string '%B %-d, %Y'" do
-      assert Datix.strptime("April 2, 2020", "%B %-d, %Y") == {:ok, %{day: 2, month: 4, year: 2020}}
+      assert Datix.strptime("April 2, 2020", "%B %-d, %Y") ==
+               {:ok, %{day: 2, month: 4, year: 2020}}
     end
 
     test "parses with format-string '%A, %a'" do

@@ -7,6 +7,7 @@ defmodule Datix.NaiveDateTimeTest do
     test "parses valid date-string with format-string '%Y/%m/%d %H:%M:%S'" do
       assert Datix.NaiveDateTime.parse("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
                {:ok, ~N[2018-12-30 11:23:55]}
+
       assert Datix.NaiveDateTime.parse("-2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
                {:ok, ~N[-2018-12-30 11:23:55]}
     end

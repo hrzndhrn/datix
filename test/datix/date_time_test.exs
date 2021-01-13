@@ -7,6 +7,7 @@ defmodule Datix.DateTimeTest do
     test "parses valid date-string with format-string '%Y/%m/%d %H:%M:%S'" do
       assert Datix.DateTime.parse("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
                {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
+
       assert Datix.DateTime.parse("-2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
                {:ok, ~U[-2018-12-30 11:23:55Z], {"UTC", 0}}
     end
