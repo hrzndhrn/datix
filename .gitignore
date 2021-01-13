@@ -22,6 +22,10 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 datix-*.tar
 
-
 # Temporary files for e.g. tests
 /tmp
+
+# dialyzer plt
+/test/support/plts/*.plt
+/test/support/plts/*.plt.hash
+
