@@ -15,6 +15,36 @@ defmodule Datix.NaiveDateTimeTest do
     test "adds missing data" do
       assert Datix.NaiveDateTime.parse("", "") == {:ok, ~N[0000-01-01 00:00:00Z]}
     end
+
+    test "parse date and time in 12 hour format (12:00:00 AM)" do
+      assert Datix.NaiveDateTime.parse("Jan 15, 2021 12:00:00 AM", "%b %d, %Y %I:%M:%S %p") ==
+               {:ok, ~N[2021-01-15 00:00:00]}
+    end
+
+    test "parse date and time in 12 hour format (12:00:01 AM)" do
+      assert Datix.NaiveDateTime.parse("Jan 15, 2021 12:00:01 AM", "%b %d, %Y %I:%M:%S %p") ==
+               {:ok, ~N[2021-01-15 00:00:01]}
+    end
+
+    test "parse date and time in 12 hour format (11:59:59 AM)" do
+      assert Datix.NaiveDateTime.parse("Jan 15, 2021 11:59:59 AM", "%b %d, %Y %I:%M:%S %p") ==
+               {:ok, ~N[2021-01-15 11:59:59]}
+    end
+
+    test "parse date and time in 12 hour format (12:00:00 PM)" do
+      assert Datix.NaiveDateTime.parse("Jan 15, 2021 12:00:00 PM", "%b %d, %Y %I:%M:%S %p") ==
+               {:ok, ~N[2021-01-15 12:00:00]}
+    end
+
+    test "parse date and time in 12 hour format (01:00:00 PM)" do
+      assert Datix.NaiveDateTime.parse("Jan 15, 2021 01:00:00 PM", "%b %d, %Y %I:%M:%S %p") ==
+               {:ok, ~N[2021-01-15 13:00:00]}
+    end
+
+    test "parse date and time in 12 hour format (11:59:59 PM)" do
+      assert Datix.NaiveDateTime.parse("Jan 15, 2021 11:59:59 PM", "%b %d, %Y %I:%M:%S %p") ==
+               {:ok, ~N[2021-01-15 23:59:59]}
+    end
   end
 
   describe "parse!/3" do

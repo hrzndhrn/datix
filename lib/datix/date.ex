@@ -118,6 +118,7 @@ defmodule Datix.Date do
         :am_pm,
         :day,
         :hour,
+        :hour_12,
         :microsecond,
         :minute,
         :month,

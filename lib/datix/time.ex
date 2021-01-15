@@ -85,6 +85,8 @@ defmodule Datix.Time do
   def new(data, opts), do: data |> Datix.assume(Time) |> new(opts)
 
   defp to_hour_24(_hour_12, nil), do: {:error, :invalid_time}
+  defp to_hour_24(12, :am), do: {:ok, 0}
+  defp to_hour_24(12, :pm), do: {:ok, 12}
   defp to_hour_24(hour_12, :am), do: {:ok, hour_12}
   defp to_hour_24(hour_12, :pm), do: {:ok, hour_12 + 12}
 
