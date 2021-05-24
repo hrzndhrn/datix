@@ -7,6 +7,8 @@
 
 A date-time parser using `Calendar.strftime` format strings.
 
+Documentation can be found at [https://hexdocs.pm/datix](https://hexdocs.pm/datix).
+
 ## Installation
 
 The package can be installed by adding `datix` to your list of
