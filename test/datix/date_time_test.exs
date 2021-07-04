@@ -1,35 +1,34 @@
 defmodule Datix.DateTimeTest do
   use ExUnit.Case
 
+  import Prove
+
   doctest Datix.DateTime
 
   describe "parse/3" do
-    test "parses valid date-string with format-string '%Y/%m/%d %H:%M:%S'" do
-      assert Datix.DateTime.parse("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
-               {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
+    batch "parses valid date-string:" do
+      prove Datix.DateTime.parse("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
+              {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
 
-      assert Datix.DateTime.parse("-2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
-               {:ok, ~U[-2018-12-30 11:23:55Z], {"UTC", 0}}
+      prove Datix.DateTime.parse("-2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
+              {:ok, ~U[-2018-12-30 11:23:55Z], {"UTC", 0}}
+
+      prove Datix.DateTime.parse("2018/12/30 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z") ==
+              {:ok, ~U[2018-12-30 09:23:55Z], {"CEST", 7_200}}
+
+      prove Datix.DateTime.parse("2018/12/30 11:23:55 UTC+0000", "%Y/%m/%d %H:%M:%S %Z%z") ==
+              {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
+
+      prove Datix.DateTime.parse("2018/12/30 11:23:55 -0300", "%Y/%m/%d %H:%M:%S %z") ==
+              {:ok, ~U[2018-12-30 14:23:55Z], {nil, -10_800}}
+
+      prove Datix.DateTime.parse("2018/12/30 11:23:55 -0000", "%Y/%m/%d %H:%M:%S %z") ==
+              {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
     end
 
-    test "parses valid date-string with format-string '%Y/%m/%d %H:%M:%S %Z%z'" do
-      assert Datix.DateTime.parse("2018/12/30 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z") ==
-               {:ok, ~U[2018-12-30 09:23:55Z], {"CEST", 7_200}}
-
-      assert Datix.DateTime.parse("2018/12/30 11:23:55 UTC+0000", "%Y/%m/%d %H:%M:%S %Z%z") ==
-               {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
-    end
-
-    test "parses valid date-string with format-string '%Y/%m/%d %H:%M:%S %z'" do
-      assert Datix.DateTime.parse("2018/12/30 11:23:55 -0300", "%Y/%m/%d %H:%M:%S %z") ==
-               {:ok, ~U[2018-12-30 14:23:55Z], {nil, -10_800}}
-
-      assert Datix.DateTime.parse("2018/12/30 11:23:55 -0000", "%Y/%m/%d %H:%M:%S %z") ==
-               {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
-    end
-
-    test "adds missing data" do
-      assert Datix.DateTime.parse("", "") == {:ok, ~U[0000-01-01 00:00:00Z], {"UTC", 0}}
+    batch "adds missing data" do
+      prove Datix.DateTime.parse("", "") == {:ok, ~U[0000-01-01 00:00:00Z], {"UTC", 0}}
+      prove Datix.DateTime.parse("2020", "%Y") == {:ok, ~U[2020-01-01 00:00:00Z], {"UTC", 0}}
     end
   end
 

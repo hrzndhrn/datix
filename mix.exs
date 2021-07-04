@@ -60,7 +60,8 @@ defmodule Datix.MixProject do
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:ex_cldr_calendars_coptic, "~> 0.2", only: [:dev, :test]},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.13", only: :test, runtime: false}
+      {:excoveralls, "~> 0.13", only: :test, runtime: false},
+      {:prove, "~> 0.1", only: [:dev, :test]}
     ]
   end
 end
