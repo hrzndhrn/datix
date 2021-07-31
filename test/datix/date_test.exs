@@ -56,9 +56,8 @@ defmodule Datix.DateTest do
   end
 
   describe "parse!/3" do
-    test "parses valid date-string with format-string '%Y/%m/%d'" do
-      assert Datix.Date.parse!("2018/12/30", "%Y/%m/%d") == ~D[2018-12-30]
-    end
+    prove "parses valid date-string",
+          Datix.Date.parse!("2018/12/30", "%Y/%m/%d") == ~D[2018-12-30]
 
     test "raises an error for an invalid format-string" do
       msg = "invalid format: %o"

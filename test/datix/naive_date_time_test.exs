@@ -6,7 +6,7 @@ defmodule Datix.NaiveDateTimeTest do
   doctest Datix.NaiveDateTime
 
   describe "parse/3" do
-    batch "parses valid date-string with format-string:" do
+    batch "parses valid date-string with format-string" do
       prove Datix.NaiveDateTime.parse("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
               {:ok, ~N[2018-12-30 11:23:55]}
 
@@ -14,7 +14,7 @@ defmodule Datix.NaiveDateTimeTest do
               {:ok, ~N[-2018-12-30 11:23:55]}
     end
 
-    batch "parse date and time in 12 hour format:" do
+    batch "parse date and time in 12 hour format" do
       prove Datix.NaiveDateTime.parse("Jan 15, 2021 12:00:00 AM", "%b %d, %Y %I:%M:%S %p") ==
               {:ok, ~N[2021-01-15 00:00:00]}
 
@@ -34,21 +34,19 @@ defmodule Datix.NaiveDateTimeTest do
               {:ok, ~N[2021-01-15 23:59:59]}
     end
 
-    batch "adds missing data:" do
+    batch "adds missing data" do
       prove Datix.NaiveDateTime.parse("", "") == {:ok, ~N[0000-01-01 00:00:00Z]}
     end
   end
 
   describe "parse!/3" do
-    test "parses valid date-string with format-string '%Y/%m/%d %H:%M:%S'" do
-      assert Datix.NaiveDateTime.parse!("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
-               ~N[2018-12-30 11:23:55]
-    end
+    prove "parses valid date-string",
+          Datix.NaiveDateTime.parse!("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S") ==
+            ~N[2018-12-30 11:23:55]
 
-    test "sets calendar to default" do
-      naive_datetime = Datix.NaiveDateTime.parse!("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S")
-      assert naive_datetime.calendar == Calendar.ISO
-    end
+    prove "sets calendar to default",
+          Datix.NaiveDateTime.parse!("2018/12/30 11:23:55", "%Y/%m/%d %H:%M:%S").calendar ==
+            Calendar.ISO
 
     test "raises an error for an invalid time" do
       msg = "cannot build naive-date-time, reason: :invalid_time"

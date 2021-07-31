@@ -47,9 +47,8 @@ defmodule Datix.TimeTest do
   end
 
   describe "parse!/3" do
-    test "parses valid time-string with format-string '%H:%M:%S.%f'" do
-      assert Datix.Time.parse!("11:24:33.555", "%H:%M:%S.%f") == ~T[11:24:33.555]
-    end
+    prove "parses valid time-string",
+          Datix.Time.parse!("11:24:33.555", "%H:%M:%S.%f") == ~T[11:24:33.555]
 
     test "raises an error for invalid time" do
       msg = "cannot build time, reason: :invalid_time"
