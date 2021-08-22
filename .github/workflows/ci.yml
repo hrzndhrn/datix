@@ -58,10 +58,6 @@ jobs:
         if: ${{ contains(matrix.elixir, '1.12.2') && contains(matrix.otp, '24.0') }}
         run: MIX_ENV=test mix credo --strict
       - name: Run tests with coverage
-        if: ${{ !env.ACT }}
         run: MIX_ENV=test mix coveralls.github
-      - name: Run tests with coverage
-        if: ${{ env.ACT }}
-        run: MIX_ENV=test mix coveralls
       - name: Static code analysis
         run: mix dialyzer
