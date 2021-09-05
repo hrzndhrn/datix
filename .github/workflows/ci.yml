@@ -1,4 +1,4 @@
-# Created with GitHubActions version 0.1.0
+# Created with GitHubActions version 0.1.1
 name: CI
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
