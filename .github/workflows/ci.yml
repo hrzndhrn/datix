@@ -13,14 +13,14 @@ jobs:
       matrix:
         elixir:
           - '1.11.4'
-          - '1.12.2'
+          - '1.12.3'
         otp:
           - '21.3'
           - '22.3'
           - '23.3'
           - '24.0'
         exclude:
-          - elixir: '1.12.2'
+          - elixir: '1.12.3'
             otp: '21.3'
     steps:
       - name: Checkout
