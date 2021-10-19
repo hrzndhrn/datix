@@ -1,4 +1,4 @@
-# Created with GitHubActions version 0.1.1
+# Created with GitHubActions version 0.1.2
 name: CI
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -18,7 +18,7 @@ jobs:
           - '21.3'
           - '22.3'
           - '23.3'
-          - '24.0'
+          - '24.1'
         exclude:
           - elixir: '1.12.3'
             otp: '21.3'
@@ -52,10 +52,10 @@ jobs:
       - name: Compile project
         run: MIX_ENV=test mix compile --warnings-as-errors
       - name: Check code format
-        if: ${{ contains(matrix.elixir, '1.12.3') && contains(matrix.otp, '24.0') }}
+        if: ${{ contains(matrix.elixir, '1.12.3') && contains(matrix.otp, '24.1') }}
         run: MIX_ENV=test mix format --check-formatted
       - name: Lint code
-        if: ${{ contains(matrix.elixir, '1.12.3') && contains(matrix.otp, '24.0') }}
+        if: ${{ contains(matrix.elixir, '1.12.3') && contains(matrix.otp, '24.1') }}
         run: MIX_ENV=test mix credo --strict
       - name: Run tests with coverage
         run: MIX_ENV=test mix coveralls.github
