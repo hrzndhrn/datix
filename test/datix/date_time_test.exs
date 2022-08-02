@@ -24,6 +24,9 @@ defmodule Datix.DateTimeTest do
 
       prove Datix.DateTime.parse("2018/12/30 11:23:55 -0000", "%Y/%m/%d %H:%M:%S %z") ==
               {:ok, ~U[2018-12-30 11:23:55Z], {"UTC", 0}}
+
+      prove Datix.DateTime.parse("2022-08-02 09:10:00 CEST", "%Y-%m-%d %H:%M:%S %Z") ==
+              {:ok, ~U[2022-08-02 09:10:00Z], {"CEST", nil}}
     end
 
     batch "adds missing data" do

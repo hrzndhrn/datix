@@ -21,13 +21,12 @@ defmodule Datix.Time do
   Missing values will be set to minimum.
 
   ## Examples
-  ```elixir
+
       iex> Datix.Time.parse("11:12:55", "%X")
       {:ok, ~T[11:12:55]}
 
       iex> Datix.Time.parse("10 PM", "%I %p")
       {:ok, ~T[22:00:00]}
-  ```
   """
   @spec parse(String.t(), String.t(), list()) ::
           {:ok, Time.t()}
