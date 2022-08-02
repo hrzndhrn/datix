@@ -33,7 +33,7 @@ defmodule Datix.Date do
   Missing values will be set to minimum.
 
   ## Examples
-  ```elixir
+
       iex> Datix.Date.parse("2022-05-11", "%x")
       {:ok, ~D[2022-05-11]}
 
@@ -59,7 +59,6 @@ defmodule Datix.Date do
       iex> Datix.Date.parse("Fr, 1.4.2020", "%a, %-d.%-m.%Y",
       ...>   abbreviated_day_of_week_names: ~w(Mo Di Mi Do Fr Sa So))
       {:error, :invalid_date}
-  ```
   """
   @spec parse(String.t(), String.t(), list()) ::
           {:ok, Date.t()}

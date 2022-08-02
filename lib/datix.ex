@@ -80,7 +80,7 @@ defmodule Datix do
       defaults to `[am: "am", pm: "pm"]`.
 
   ## Examples
-  ```elixir
+
       iex> Datix.strptime("2021/01/10", "%Y/%m/%d")
       {:ok, %{day: 10, month: 1, year: 2021}}
 
@@ -106,7 +106,6 @@ defmodule Datix do
       iex> compiled = Datix.compile!("%Y/%m/%d")
       iex> Datix.strptime("2021/01/10", compiled)
       {:ok, %{day: 10, month: 1, year: 2021}}
-  ```
   """
   @spec strptime(String.t(), String.t() | compiled(), keyword()) ::
           {:ok, Datix.t()}

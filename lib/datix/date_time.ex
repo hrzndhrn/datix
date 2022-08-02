@@ -9,7 +9,9 @@ defmodule Datix.DateTime do
   See the `Calendar.strftime` documentation for how to specify a format-string.
 
   The `:ok` tuple contains always an UTC datetime and a tuple with the time zone
-  infos.
+  infos. If the format string contains an offset (`%z`), this is added to the
+  datetime. If the format string contains only the time zone abbreviation (`%Z`),
+  the offset in the time zone info tuple is set to nil.
 
   ## Options
 
@@ -41,13 +43,12 @@ defmodule Datix.DateTime do
       defaults to `[am: "am", pm: "pm"]`.
 
   ## Examples
-  ```elixir
+
       iex> Datix.DateTime.parse("2021/01/10 12:14:24", "%Y/%m/%d %H:%M:%S")
       {:ok, ~U[2021-01-10 12:14:24Z], {"UTC", 0}}
 
       iex> Datix.DateTime.parse("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
       {:ok, ~U[2018-06-27 09:23:55Z], {"CEST", 7_200}}
-  ```
   """
   @spec parse(String.t(), String.t(), list()) ::
           {:ok, DateTime.t(), {String.t(), integer()}}
@@ -71,13 +72,12 @@ defmodule Datix.DateTime do
   This function is just defined for UTC datetimes.
 
   ## Examples
-  ```elixir
+
       iex> Datix.DateTime.parse!("2018/06/27 11:23:55 UTC+0000", "%Y/%m/%d %H:%M:%S %Z%z")
       ~U[2018-06-27 11:23:55Z]
 
       iex> Datix.DateTime.parse!("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
       ** (ArgumentError) parse!/3 is just defined for UTC, not for CEST
-  ```
   """
   @spec parse!(String.t(), String.t(), list()) :: DateTime.t()
   def parse!(datetime_str, format_str, opts \\ []) do
@@ -118,6 +118,9 @@ defmodule Datix.DateTime do
 
       {"UTC", 0} ->
         {:ok, datetime, {"UTC", 0}}
+
+      {_zone_abbr, nil} = zone ->
+        {:ok, datetime, zone}
 
       {_zone_abbr, zone_offset} = zone ->
         {:ok, DateTime.add(datetime, -1 * zone_offset), zone}

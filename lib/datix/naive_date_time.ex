@@ -43,13 +43,12 @@ defmodule Datix.NaiveDateTime do
   Time zone infos will be ignored.
 
   ## Examples
-  ```elixir
+
       iex> Datix.NaiveDateTime.parse("2021/01/10 12:14:24", "%Y/%m/%d %H:%M:%S")
       {:ok, ~N[2021-01-10 12:14:24]}
 
       iex> Datix.NaiveDateTime.parse("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
       {:ok, ~N[2018-06-27 11:23:55Z]}
-  ```
   """
   @spec parse(String.t(), String.t(), list()) ::
           {:ok, NaiveDateTime.t()}
