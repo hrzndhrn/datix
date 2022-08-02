@@ -47,10 +47,14 @@ defmodule Datix.DateTime do
       iex> Datix.DateTime.parse("2021/01/10 12:14:24", "%Y/%m/%d %H:%M:%S")
       {:ok, ~U[2021-01-10 12:14:24Z], {"UTC", 0}}
 
+      iex> format = Datix.compile!("%Y/%m/%d %H:%M:%S")
+      iex> Datix.DateTime.parse("2021/01/10 12:14:24", format)
+      {:ok, ~U[2021-01-10 12:14:24Z], {"UTC", 0}}
+
       iex> Datix.DateTime.parse("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
       {:ok, ~U[2018-06-27 09:23:55Z], {"CEST", 7_200}}
   """
-  @spec parse(String.t(), String.t(), list()) ::
+  @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, DateTime.t(), {String.t(), integer()}}
           | {:error, :invalid_date}
           | {:error, :invalid_input}
@@ -59,8 +63,8 @@ defmodule Datix.DateTime do
           | {:error, {:invalid_string, [modifier: String.t()]}}
           | {:error, {:invalid_integer, [modifier: String.t()]}}
           | {:error, {:invalid_modifier, [modifier: String.t()]}}
-  def parse(datetime_str, format_str, opts \\ []) do
-    with {:ok, data} <- Datix.strptime(datetime_str, format_str, opts) do
+  def parse(datetime_str, format, opts \\ []) do
+    with {:ok, data} <- Datix.strptime(datetime_str, format, opts) do
       new(data, opts)
     end
   end
@@ -76,13 +80,17 @@ defmodule Datix.DateTime do
       iex> Datix.DateTime.parse!("2018/06/27 11:23:55 UTC+0000", "%Y/%m/%d %H:%M:%S %Z%z")
       ~U[2018-06-27 11:23:55Z]
 
+      iex> format = Datix.compile!("%Y/%m/%d %H:%M:%S %Z%z")
+      iex> Datix.DateTime.parse!("2018/06/27 11:23:55 UTC+0000", format)
+      ~U[2018-06-27 11:23:55Z]
+
       iex> Datix.DateTime.parse!("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
       ** (ArgumentError) parse!/3 is just defined for UTC, not for CEST
   """
-  @spec parse!(String.t(), String.t(), list()) :: DateTime.t()
-  def parse!(datetime_str, format_str, opts \\ []) do
+  @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: DateTime.t()
+  def parse!(datetime_str, format, opts \\ []) do
     datetime_str
-    |> Datix.strptime!(format_str, opts)
+    |> Datix.strptime!(format, opts)
     |> new(opts)
     |> case do
       {:ok, datetime, {"UTC", 0}} ->

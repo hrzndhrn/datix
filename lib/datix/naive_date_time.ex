@@ -47,10 +47,14 @@ defmodule Datix.NaiveDateTime do
       iex> Datix.NaiveDateTime.parse("2021/01/10 12:14:24", "%Y/%m/%d %H:%M:%S")
       {:ok, ~N[2021-01-10 12:14:24]}
 
+      iex> format = Datix.compile!("%Y/%m/%d %H:%M:%S")
+      iex> Datix.NaiveDateTime.parse("2021/01/10 12:14:24", format)
+      {:ok, ~N[2021-01-10 12:14:24]}
+
       iex> Datix.NaiveDateTime.parse("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
       {:ok, ~N[2018-06-27 11:23:55Z]}
   """
-  @spec parse(String.t(), String.t(), list()) ::
+  @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, NaiveDateTime.t()}
           | {:error, :invalid_date}
           | {:error, :invalid_input}
@@ -59,8 +63,8 @@ defmodule Datix.NaiveDateTime do
           | {:error, {:invalid_string, [modifier: String.t()]}}
           | {:error, {:invalid_integer, [modifier: String.t()]}}
           | {:error, {:invalid_modifier, [modifier: String.t()]}}
-  def parse(naive_datetime_str, format_str, opts \\ []) do
-    with {:ok, data} <- Datix.strptime(naive_datetime_str, format_str, opts) do
+  def parse(naive_datetime_str, format, opts \\ []) do
+    with {:ok, data} <- Datix.strptime(naive_datetime_str, format, opts) do
       new(data, opts)
     end
   end
@@ -69,10 +73,10 @@ defmodule Datix.NaiveDateTime do
   Parses a datetime string according to the given `format`, erroring out for
   invalid arguments.
   """
-  @spec parse!(String.t(), String.t(), list()) :: NaiveDateTime.t()
-  def parse!(naive_datetime_str, format_str, opts \\ []) do
+  @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: NaiveDateTime.t()
+  def parse!(naive_datetime_str, format, opts \\ []) do
     naive_datetime_str
-    |> Datix.strptime!(format_str, opts)
+    |> Datix.strptime!(format, opts)
     |> new(opts)
     |> case do
       {:ok, date} ->

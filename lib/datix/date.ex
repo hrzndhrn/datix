@@ -40,6 +40,10 @@ defmodule Datix.Date do
       iex> Datix.Date.parse("2021/01/10", "%Y/%m/%d")
       {:ok, ~D[2021-01-10]}
 
+      iex> format = Datix.compile!("%Y/%m/%d")
+      iex> Datix.Date.parse("2021/01/10", format)
+      {:ok, ~D[2021-01-10]}
+
       iex> Datix.Date.parse("2021/01/10", "%x", preferred_date: "%Y/%m/%d")
       {:ok, ~D[2021-01-10]}
 
@@ -60,7 +64,7 @@ defmodule Datix.Date do
       ...>   abbreviated_day_of_week_names: ~w(Mo Di Mi Do Fr Sa So))
       {:error, :invalid_date}
   """
-  @spec parse(String.t(), String.t(), list()) ::
+  @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, Date.t()}
           | {:error, :invalid_date}
           | {:error, :invalid_input}
@@ -69,8 +73,8 @@ defmodule Datix.Date do
           | {:error, {:invalid_string, [modifier: String.t()]}}
           | {:error, {:invalid_integer, [modifier: String.t()]}}
           | {:error, {:invalid_modifier, [modifier: String.t()]}}
-  def parse(date_str, format_str, opts \\ []) do
-    with {:ok, data} <- Datix.strptime(date_str, format_str, opts) do
+  def parse(date_str, format, opts \\ []) do
+    with {:ok, data} <- Datix.strptime(date_str, format, opts) do
       new(data, opts)
     end
   end
@@ -79,10 +83,10 @@ defmodule Datix.Date do
   Parses a date string according to the given `format`, erroring out for
   invalid arguments.
   """
-  @spec parse!(String.t(), String.t(), list()) :: Date.t()
-  def parse!(date_str, format_str, opts \\ []) do
+  @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: Date.t()
+  def parse!(date_str, format, opts \\ []) do
     date_str
-    |> Datix.strptime!(format_str, opts)
+    |> Datix.strptime!(format, opts)
     |> new(opts)
     |> case do
       {:ok, date} ->

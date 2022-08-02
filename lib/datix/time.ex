@@ -25,10 +25,14 @@ defmodule Datix.Time do
       iex> Datix.Time.parse("11:12:55", "%X")
       {:ok, ~T[11:12:55]}
 
+      iex> format = Datix.compile!("%X")
+      iex> Datix.Time.parse("11:12:55", format)
+      {:ok, ~T[11:12:55]}
+
       iex> Datix.Time.parse("10 PM", "%I %p")
       {:ok, ~T[22:00:00]}
   """
-  @spec parse(String.t(), String.t(), list()) ::
+  @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, Time.t()}
           | {:error, :invalid_time}
           | {:error, :invalid_input}
@@ -37,8 +41,8 @@ defmodule Datix.Time do
           | {:error, {:invalid_string, [modifier: String.t()]}}
           | {:error, {:invalid_integer, [modifier: String.t()]}}
           | {:error, {:invalid_modifier, [modifier: String.t()]}}
-  def parse(time_str, format_str, opts \\ []) do
-    with {:ok, data} <- Datix.strptime(time_str, format_str, sweep(opts)) do
+  def parse(time_str, format, opts \\ []) do
+    with {:ok, data} <- Datix.strptime(time_str, format, sweep(opts)) do
       new(data, opts)
     end
   end
@@ -47,10 +51,10 @@ defmodule Datix.Time do
   Parses a date string according to the given `format`, erroring out for
   invalid arguments.
   """
-  @spec parse!(String.t(), String.t(), list()) :: Time.t()
-  def parse!(time_str, format_str, opts \\ []) do
+  @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: Time.t()
+  def parse!(time_str, format, opts \\ []) do
     time_str
-    |> Datix.strptime!(format_str, sweep(opts))
+    |> Datix.strptime!(format, sweep(opts))
     |> new(opts)
     |> case do
       {:ok, time} ->
