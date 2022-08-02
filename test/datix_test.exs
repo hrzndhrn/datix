@@ -3,7 +3,7 @@ defmodule DatixTest do
 
   doctest Datix
 
-  describe "parse/3" do
+  describe "strptime/3" do
     # Without modifiers
 
     test "parses empty string" do
@@ -16,12 +16,14 @@ defmodule DatixTest do
 
     test "returns error tuple for invalid input" do
       assert Datix.strptime("foobar", "foo") == {:error, :invalid_input}
-      assert Datix.strptime("foo", "foobar") == {:error, :invalid_input}
+
+      assert Datix.strptime("foo", "foobar") ==
+               {:error, {:parse_error, expected: "foobar", got: "foo"}}
     end
 
     test "returns error tuple for different string without modifiers" do
       assert Datix.strptime("foobar", "foopar") ==
-               {:error, {:parse_error, expected: "p", got: "b"}}
+               {:error, {:parse_error, expected: "foopar", got: "foobar"}}
     end
 
     test "returns an error tuple for an unknown option" do
@@ -333,7 +335,7 @@ defmodule DatixTest do
     end
   end
 
-  describe "parse!/3" do
+  describe "strptime!/3" do
     test "raisee an error for an invalid sting" do
       msg = "invalid string for %a"
 
@@ -373,5 +375,113 @@ defmodule DatixTest do
         Datix.strptime!("Wednesday, Fri", "%A, %a")
       end
     end
+  end
+
+  describe "compile/1" do
+    test "parses empty string" do
+      assert_compile("", [])
+    end
+
+    test "parses string without modifiers" do
+      assert_compile("foo", [{:exact, "foo"}])
+    end
+
+    test "returns error tuple for invalid modifier" do
+      assert {:error, {:invalid_modifier, [modifier: "%l"]}} = Datix.compile("%l")
+    end
+
+    modifiers_with_defaults = [
+      {?a, ?\s, 0},
+      {?A, ?\s, 0},
+      {?b, ?\s, 0},
+      {?B, ?\s, 0},
+      {?p, ?\s, 0},
+      {?P, ?\s, 0},
+      {?Z, ?\s, 0},
+      {?c, ?0, 0},
+      {?x, ?0, 0},
+      {?X, ?0, 0},
+      {?f, ?0, 0},
+      {?d, ?0, 2},
+      {?H, ?0, 2},
+      {?I, ?0, 2},
+      {?m, ?0, 2},
+      {?M, ?0, 2},
+      {?S, ?0, 2},
+      {?y, ?0, 2},
+      {?j, ?0, 3},
+      {?q, ?0, 1},
+      {?u, ?0, 1},
+      {?Y, ?0, 4},
+      {?z, ?0, 4}
+    ]
+
+    for {modifier, padder, width} <- modifiers_with_defaults do
+      format_string = "%#{[modifier]}"
+
+      test "parses with format string '#{format_string}'" do
+        assert_compile(unquote(format_string), [
+          {:modifier, {unquote(modifier), unquote(padder), unquote(width)}}
+        ])
+      end
+
+      format_string = "%06#{[modifier]}"
+
+      test "parses with format string '#{format_string}'" do
+        assert_compile(unquote(format_string), [
+          {:modifier, {unquote(modifier), ?0, 6}}
+        ])
+      end
+    end
+
+    test "parses with format string '%%'" do
+      assert_compile("%%", [{:modifier, {?%, ?0, 0}}])
+    end
+
+    # Format-string combinations
+
+    test "parses with format-string '%Y-%m-%d %H:%M:%S'" do
+      assert_compile("Date is %Y-%m-%d and time is %H:%M:%S!", [
+        {:exact, "Date is "},
+        {:modifier, {?Y, ?0, 4}},
+        {:exact, "-"},
+        {:modifier, {?m, ?0, 2}},
+        {:exact, "-"},
+        {:modifier, {?d, ?0, 2}},
+        {:exact, " and time is "},
+        {:modifier, {?H, ?0, 2}},
+        {:exact, ":"},
+        {:modifier, {?M, ?0, 2}},
+        {:exact, ":"},
+        {:modifier, {?S, ?0, 2}},
+        {:exact, "!"}
+      ])
+    end
+  end
+
+  describe "compile!/1" do
+    test "returns the compiled struct directly on valid input" do
+      assert Datix.compile!("foo %Y") == %Datix{
+               format: [{:exact, "foo "}, {:modifier, {?Y, ?0, 4}}],
+               original: "foo %Y"
+             }
+    end
+
+    test "raises on invalid input" do
+      assert_raise ArgumentError, "invalid format: %l", fn ->
+        Datix.compile!("%l")
+      end
+    end
+  end
+
+  describe "Inspect protocol for the Datix struct" do
+    test "renders as a call to Datix.compile!/1" do
+      assert inspect(Datix.compile!("foo %Y")) == ~s{Datix.compile!("foo %Y")}
+    end
+  end
+
+  defp assert_compile(string, expected_format) do
+    assert {:ok, %Datix{format: format}} = Datix.compile(string)
+    assert format == expected_format
   end
 end

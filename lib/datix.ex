@@ -1,6 +1,6 @@
 defmodule Datix do
   @moduledoc """
-  A date-time parser using `Calendar.strftime` format strings.
+  A date-time parser using `Calendar.strftime/3` format strings.
   """
 
   @type t :: %{
@@ -21,10 +21,36 @@ defmodule Datix do
           optional(:zone_offset) => integer()
         }
 
+  @typedoc """
+  An **opaque** type representing a compiled format.
+
+  The struct representation is internal and could change in the future without notice.
+  """
+  @typedoc since: "0.2.0"
+  @opaque compiled :: %__MODULE__{
+            format: [
+              {:exact, binary()}
+              | {:modifier, {char(), padder :: char(), width :: non_neg_integer()}}
+            ],
+            original: String.t()
+          }
+
+  @doc false
+  defstruct format: [], original: nil
+
+  defimpl Inspect do
+    def inspect(%@for{original: original}, opts) do
+      Inspect.Algebra.concat(["Datix.compile!(", Inspect.BitString.inspect(original, opts), ")"])
+    end
+  end
+
   @doc """
   Parses a date-time string according to the given `format`.
 
-  See the Calendar.strftime documentation for how to specify a format string.
+  See the `Calendar.strftime/3` documentation for how to specify a format string.
+
+  `format` can be a format string or, since v0.2.0 of the library,
+  a **compiled format** as returned by `compile/1`.
 
   ## Options
 
@@ -76,9 +102,13 @@ defmodule Datix do
       iex> Datix.strptime("Di", "%a",
       ...>   abbreviated_day_of_week_names: ~w(Mo Di Mi Do Fr Sa So))
       {:ok, %{day_of_week: 2}}
+
+      iex> compiled = Datix.compile!("%Y/%m/%d")
+      iex> Datix.strptime("2021/01/10", compiled)
+      {:ok, %{day: 10, month: 1, year: 2021}}
   ```
   """
-  @spec strptime(String.t(), String.t(), keyword()) ::
+  @spec strptime(String.t(), String.t() | compiled(), keyword()) ::
           {:ok, Datix.t()}
           | {:error, :invalid_input}
           | {:error, {:parse_error, expected: String.t(), got: String.t()}}
@@ -86,9 +116,11 @@ defmodule Datix do
           | {:error, {:invalid_string, [modifier: String.t()]}}
           | {:error, {:invalid_integer, [modifier: String.t()]}}
           | {:error, {:invalid_modifier, [modifier: String.t()]}}
-  def strptime(date_time_str, format_str, opts \\ []) when is_binary(format_str) do
+  def strptime(date_time_str, format, opts \\ [])
+
+  def strptime(date_time_str, %__MODULE__{format: format}, opts) do
     with {:ok, options} <- options(opts) do
-      case parse(format_str, date_time_str, options, %{}) do
+      case parse(format, date_time_str, options, %{}) do
         {:ok, result, ""} -> {:ok, result}
         {:ok, _result, _rest} -> {:error, :invalid_input}
         error -> error
@@ -96,13 +128,19 @@ defmodule Datix do
     end
   end
 
+  def strptime(date_time_str, format_str, opts) when is_binary(format_str) do
+    with {:ok, compiled} <- compile(format_str) do
+      strptime(date_time_str, compiled, opts)
+    end
+  end
+
   @doc """
   Parses a date-time string according to the given `format`, erroring out for
   invalid arguments.
   """
-  @spec strptime!(String.t(), String.t(), keyword()) :: Datix.t()
-  def strptime!(date_time_str, format_str, opts \\ []) do
-    case strptime(date_time_str, format_str, opts) do
+  @spec strptime!(String.t(), String.t() | compiled(), keyword()) :: Datix.t()
+  def strptime!(date_time_str, format, opts \\ []) do
+    case strptime(date_time_str, format, opts) do
       {:ok, data} ->
         data
 
@@ -145,49 +183,124 @@ defmodule Datix do
     end
   end
 
-  defp parse("", date_time_rest, _opts, acc), do: {:ok, acc, date_time_rest}
+  @doc """
+  Compiles the given `format` string.
 
-  defp parse(_format_str, "", _opts, _acc), do: {:error, :invalid_input}
+  If the `format` string is a valid format string, then this function returns
+  `{:ok, compiled}`. `compiled` is a term that represents a compiled format (its internal
+  representation is private). You can pass a `t:compiled/0` term to `strptime/3` and
+  such.
 
-  defp parse("%" <> format_rest, date_time_str, opts, acc) do
-    with {:ok, modifier, new_format_rest} <- parse_modifier(format_rest),
-         {:ok, new_acc, date_time_rest} <- parse_date_time(modifier, date_time_str, opts, acc) do
-      parse(new_format_rest, date_time_rest, opts, new_acc)
+  If the `format` string is invalid, this function returns `{:error, reason}`.
+
+  You can use this function for two reasons:
+
+    * You have the same format string that you want to compile once and then use
+      to parse over and over
+
+    * You want to *validate* a format string
+
+
+
+  """
+  @doc since: "0.2.0"
+  @spec compile(String.t()) :: {:ok, compiled()} | {:error, reason :: term()}
+  def compile(format) when is_binary(format) do
+    case compile(format, _acc = []) do
+      {:ok, compiled_format} -> {:ok, %__MODULE__{format: compiled_format, original: format}}
+      {:error, reason} -> {:error, reason}
     end
   end
 
-  defp parse(<<char, format_rest::binary>>, <<char, date_time_rest::binary>>, opts, acc) do
-    parse(format_rest, date_time_rest, opts, acc)
+  @doc """
+  Like `compile/1`, but returns the compiled struct directly or raises in case of errors.
+
+  ## Examples
+
+      iex> Datix.compile!("%Y-%m-%d")
+      Datix.compile!("%Y-%m-%d")
+
+      iex> Datix.compile!("%l")
+      ** (ArgumentError) invalid format: %l
+
+  """
+  @doc since: "0.2.0"
+  @spec compile!(String.t()) :: compiled()
+  def compile!(format) do
+    case compile(format) do
+      {:ok, compiled} ->
+        compiled
+
+      {:error, {:invalid_modifier, [modifier: mod]}} ->
+        raise ArgumentError, "invalid format: #{mod}"
+    end
   end
 
-  defp parse(<<expected, _format_rest::binary>>, <<got, _date_time_rest::binary>>, _opts, _acc) do
-    {:error, {:parse_error, expected: to_string([expected]), got: to_string([got])}}
+  defp compile("", acc), do: {:ok, Enum.reverse(acc)}
+
+  defp compile("%" <> rest, acc) do
+    with {:ok, modifier, rest} <- compile_modifier(rest, nil, nil) do
+      compile(rest, [{:modifier, modifier} | acc])
+    end
   end
 
-  defp parse_modifier(format_str, padding \\ nil, with \\ nil)
-
-  defp parse_modifier("-" <> format_rest, _padding, nil = width) do
-    parse_modifier(format_rest, "", width)
+  defp compile(<<_, _::binary>> = rest, acc) do
+    {exact, rest} = take_until_modifier(rest, _acc = "")
+    compile(rest, [{:exact, exact} | acc])
   end
 
-  defp parse_modifier("_" <> format_rest, _padding, nil = width) do
-    parse_modifier(format_rest, ?\s, width)
+  defp take_until_modifier(<<>> = rest, acc), do: {acc, rest}
+  defp take_until_modifier(<<?%, _::binary>> = rest, acc), do: {acc, rest}
+
+  defp take_until_modifier(<<char, rest::binary>>, acc),
+    do: take_until_modifier(rest, <<acc::binary, char>>)
+
+  defp compile_modifier("-" <> rest, _padding, nil = width) do
+    compile_modifier(rest, _padding = "", width)
   end
 
-  defp parse_modifier("0" <> format_rest, _padding, nil = width) do
-    parse_modifier(format_rest, ?0, width)
+  defp compile_modifier("_" <> rest, _padding, nil = width) do
+    compile_modifier(rest, _padding = ?\s, width)
   end
 
-  defp parse_modifier(<<digit, format_rest::binary>>, padding, width) when digit in ?0..?9 do
-    parse_modifier(format_rest, padding, (width || 0) * 10 + (digit - ?0))
+  defp compile_modifier("0" <> rest, _padding, nil = width) do
+    compile_modifier(rest, _padding = ?0, width)
   end
 
-  defp parse_modifier(<<format, format_rest::binary>>, padding, width) do
-    {
-      :ok,
-      {format, padding || default_padding(format), width || default_width(format)},
-      format_rest
-    }
+  defp compile_modifier(<<digit, rest::binary>>, padding, width) when digit in ?0..?9 do
+    compile_modifier(rest, padding, (width || 0) * 10 + (digit - ?0))
+  end
+
+  defp compile_modifier(<<format, rest::binary>>, padding, width) do
+    modifier = {format, padding || default_padding(format), width || default_width(format)}
+
+    if format in 'aAbBpPcxXdHIjmMqSufzZyY%' do
+      {:ok, modifier, rest}
+    else
+      {:error, {:invalid_modifier, modifier: modifier_to_string(modifier)}}
+    end
+  end
+
+  defp parse([], date_time_rest, _opts, acc), do: {:ok, acc, date_time_rest}
+
+  defp parse(_format, "", _opts, _acc), do: {:error, :invalid_input}
+
+  defp parse([{:modifier, modifier} | format_rest], date_time_str, opts, acc) do
+    with {:ok, new_acc, date_time_rest} <- parse_date_time(modifier, date_time_str, opts, acc) do
+      parse(format_rest, date_time_rest, opts, new_acc)
+    end
+  end
+
+  defp parse([{:exact, exact} | format_rest], date_time_str, opts, acc) do
+    expected_size = byte_size(exact)
+
+    case date_time_str do
+      <<got::size(expected_size)-binary, date_time_rest::binary>> when got == exact ->
+        parse(format_rest, date_time_rest, opts, acc)
+
+      _other ->
+        {:error, {:parse_error, expected: exact, got: date_time_str}}
+    end
   end
 
   defp parse_date_time({format, padding, _width} = modifier, date_time_str, opts, acc)
@@ -258,7 +371,8 @@ defmodule Datix do
 
   defp parse_date_time({format, _padding, _width}, date_time_str, opts, acc)
        when format in 'cxX' do
-    parse(preferred_format(format, opts), date_time_str, Map.put(opts, :preferred, format), acc)
+    {:ok, %__MODULE__{format: compiled_format}} = compile(preferred_format(format, opts))
+    parse(compiled_format, date_time_str, Map.put(opts, :preferred, format), acc)
   end
 
   defp parse_date_time({?%, _padding, _width}, "%" <> date_time_rest, _opts, acc) do
