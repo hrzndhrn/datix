@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2022/08/03
+
+### Breaking changes
+
++ Add option `pivot_year`. This option is required if the format string contains
+  `%y` (year as 2-digits).
+
 ## 0.2.0 - 2022/08/02
 
 + Add `Datix.compile/1` and `Datix.compile!/1`. These return a "compiled" format
