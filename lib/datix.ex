@@ -605,12 +605,15 @@ defmodule Datix do
       abbreviated_day_of_week_names: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     }
 
+    extra_allowed_keys = [:pivot_year]
+
     opts
     |> Keyword.delete(:calendar)
     |> Enum.reduce_while({:ok, defaults}, fn {key, value}, {:ok, acc} ->
-      case Map.has_key?(acc, key) do
-        true -> {:cont, {:ok, %{acc | key => value}}}
-        false -> {:halt, {:error, {:unknown, option: key}}}
+      cond do
+        Map.has_key?(acc, key) -> {:cont, {:ok, %{acc | key => value}}}
+        key in extra_allowed_keys -> {:cont, {:ok, acc}}
+        true -> {:halt, {:error, {:unknown, option: key}}}
       end
     end)
   end

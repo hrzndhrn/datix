@@ -27,6 +27,17 @@ defmodule Datix.DateTimeTest do
 
       prove Datix.DateTime.parse("2022-08-02 09:10:00 CEST", "%Y-%m-%d %H:%M:%S %Z") ==
               {:ok, ~U[2022-08-02 09:10:00Z], {"CEST", nil}}
+
+      # With 2-year digits, it figures out the right century.
+
+      prove Datix.DateTime.parse("20-Jan-21 01:02:03", "%d-%b-%y %H:%M:%S", pivot_year: 50) ==
+              {:ok, ~U[2021-01-20 01:02:03Z], {"UTC", 0}}
+
+      prove Datix.DateTime.parse("20-Jan-88 01:02:03", "%d-%b-%y %H:%M:%S", pivot_year: 50) ==
+              {:ok, ~U[1988-01-20 01:02:03Z], {"UTC", 0}}
+
+      prove Datix.DateTime.parse("20-Jan-88 01:02:03", "%d-%b-%y %H:%M:%S", pivot_year: 87) ==
+              {:ok, ~U[1988-01-20 01:02:03Z], {"UTC", 0}}
     end
 
     batch "adds missing data" do
