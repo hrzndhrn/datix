@@ -1,6 +1,6 @@
 defmodule Datix.Time do
   @moduledoc """
-  A `Time` parser using `Calendar.strftime` format-string.
+  A `Time` parser using `Calendar.strftime/3` format-string.
   """
 
   @doc """
@@ -9,6 +9,7 @@ defmodule Datix.Time do
   See the `Calendar.strftime` documentation for how to specify a format-string.
 
   ## Options
+
     * `:calendar` - the calendar to build the `Time`, defaults to `Calendar.ISO`
 
     * `:preferred_time` - a string for the preferred format to show times,
@@ -50,6 +51,10 @@ defmodule Datix.Time do
   @doc """
   Parses a date string according to the given `format`, erroring out for
   invalid arguments.
+
+  ## Options
+
+  Accepts the same options as listed for `parse/3`.
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: Time.t()
   def parse!(time_str, format, opts \\ []) do

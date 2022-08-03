@@ -1,6 +1,6 @@
 defmodule Datix.NaiveDateTime do
   @moduledoc """
-  A `NaiveDateTime` parser using `Calendar.strftime` format-string.
+  A `NaiveDateTime` parser using `Calendar.strftime/3` format-string.
   """
 
   @doc """
@@ -40,6 +40,16 @@ defmodule Datix.NaiveDateTime do
     * `:am_pm_names` - a keyword list with the names of the period of the day,
       defaults to `[am: "am", pm: "pm"]`.
 
+    * `:pivot_year` - a 2-digit year that represents the *pivot year* to use when
+      `%y` is used. `%y` represents a 2-digit year, but Datix doesn't assume anything
+      about which *century* such year refers to. For this reason, the `:pivot_year`
+      option is required whenever `%y` is present in the format string; if not
+      present, this function returns `{:error, :missing_pivot_year_option}`.
+      For example, if `pivot_year: 65`, then the 2-digit year `64` and lower will
+      refer to the current century (`2064` and so on at the time of writing this),
+      while the 2-digit year `65` and higher will refer to the previous century
+      (`1965` and so on).
+
   Time zone infos will be ignored.
 
   ## Examples
@@ -53,6 +63,12 @@ defmodule Datix.NaiveDateTime do
 
       iex> Datix.NaiveDateTime.parse("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
       {:ok, ~N[2018-06-27 11:23:55Z]}
+
+      iex> Datix.NaiveDateTime.parse("21/11/22", "%y/%m/%d", pivot_year: 50)
+      {:ok, ~N[2021-11-22 00:00:00]}
+
+      iex> Datix.NaiveDateTime.parse("21/11/22", "%y/%m/%d", pivot_year: 20)
+      {:ok, ~N[1921-11-22 00:00:00]}
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, NaiveDateTime.t()}
@@ -72,6 +88,10 @@ defmodule Datix.NaiveDateTime do
   @doc """
   Parses a datetime string according to the given `format`, erroring out for
   invalid arguments.
+
+  ## Options
+
+  Accepts the same options as listed for `parse/3`.
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: NaiveDateTime.t()
   def parse!(naive_datetime_str, format, opts \\ []) do

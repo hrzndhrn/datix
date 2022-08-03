@@ -100,6 +100,10 @@ defmodule Datix.Date do
   @doc """
   Parses a date string according to the given `format`, erroring out for
   invalid arguments.
+
+  ## Options
+
+  Accepts the same options as listed for `parse/3`.
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: Date.t()
   def parse!(date_str, format, opts \\ []) do

@@ -75,6 +75,10 @@ defmodule Datix.DateTime do
 
   This function is just defined for UTC datetimes.
 
+  ## Options
+
+  Accepts the same options as listed for `parse/3`.
+
   ## Examples
 
       iex> Datix.DateTime.parse!("2018/06/27 11:23:55 UTC+0000", "%Y/%m/%d %H:%M:%S %Z%z")
