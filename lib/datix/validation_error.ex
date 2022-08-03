@@ -19,6 +19,7 @@ defmodule Datix.ValidationError do
     case reason do
       :invalid_date -> "date is not valid"
       :invalid_time -> "time is not valid"
+      {:unknown_timezone_abbr, abbr} -> "unknown timezone abbreviation: #{abbr}"
     end
   end
 end

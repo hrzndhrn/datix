@@ -8,7 +8,7 @@ defmodule Datix.Time do
   @doc """
   Parses a time string according to the given `format`.
 
-  See the `Calendar.strftime` documentation for how to specify a format-string.
+  See the `Calendar.strftime/3` documentation for how to specify a format string.
 
   ## Options
 
@@ -34,11 +34,15 @@ defmodule Datix.Time do
 
       iex> Datix.Time.parse("10 PM", "%I %p")
       {:ok, ~T[22:00:00]}
+
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, Time.t()}
-          | {:error, Datix.FormatStringError.t()}
-          | {:error, Datix.ParseError.t()}
+          | {:error,
+             Datix.FormatStringError.t()
+             | Datix.ValidationError.t()
+             | Datix.ParseError.t()
+             | Datix.OptionError.t()}
   def parse(time_str, format, opts \\ []) do
     with {:ok, data} <- Datix.strptime(time_str, format, sweep(opts)) do
       new(data, opts)
