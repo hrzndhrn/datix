@@ -4,6 +4,7 @@ defmodule Datix.DateTest do
   import Prove
 
   alias Cldr.Calendar.Coptic
+  alias Datix.{OptionError, ValidationError}
 
   doctest Datix.Date
 
@@ -22,13 +23,19 @@ defmodule Datix.DateTest do
 
     batch "returns error-tuple for invalid date-string:" do
       prove Datix.Date.parse("2018/x2/30", "%Y/%m/%d") ==
-              {:error, {:invalid_integer, [modifier: "%m"]}}
+              {:error, %Datix.ParseError{reason: :invalid_integer, modifier: "%m"}}
 
-      prove Datix.Date.parse("2018/99/30", "%Y/%m/%d") == {:error, :invalid_date}
+      prove Datix.Date.parse("2018/99/30", "%Y/%m/%d") ==
+              {:error,
+               %ValidationError{
+                 reason: :invalid_date,
+                 module: Datix.Date
+               }}
     end
 
     batch "returns error-tuple for missing :pivot_year option when using %y:" do
-      prove Datix.Date.parse("99", "%y") == {:error, :missing_pivot_year_option}
+      prove Datix.Date.parse("99", "%y") ==
+              {:error, %OptionError{reason: :missing, option: :pivot_year}}
     end
 
     batch "adds day, month, and/or year:" do
@@ -47,18 +54,42 @@ defmodule Datix.DateTest do
 
     batch "validates day of week" do
       prove Datix.Date.parse("Saturday, 2019-06-01", "%A, %x") == {:ok, ~D[2019-06-01]}
-      prove Datix.Date.parse("Friday, 2019-06-01", "%A, %x") == {:error, :invalid_date}
+
+      prove Datix.Date.parse("Friday, 2019-06-01", "%A, %x") ==
+              {:error,
+               %ValidationError{
+                 reason: :invalid_date,
+                 module: Datix.Date
+               }}
     end
 
     batch "validates day of year" do
       prove Datix.Date.parse("152, 2019-06-01", "%j, %x") == {:ok, ~D[2019-06-01]}
-      prove Datix.Date.parse("500, 2019-06-01", "%j, %x") == {:error, :invalid_date}
-      prove Datix.Date.parse("001, 2019-06-01", "%j, %x") == {:error, :invalid_date}
+
+      prove Datix.Date.parse("500, 2019-06-01", "%j, %x") ==
+              {:error,
+               %ValidationError{
+                 reason: :invalid_date,
+                 module: Datix.Date
+               }}
+
+      prove Datix.Date.parse("001, 2019-06-01", "%j, %x") ==
+              {:error,
+               %ValidationError{
+                 reason: :invalid_date,
+                 module: Datix.Date
+               }}
     end
 
     batch "validates quarter of year" do
       prove Datix.Date.parse("2, 2019-06-01", "%q, %x") == {:ok, ~D[2019-06-01]}
-      prove Datix.Date.parse("1, 2019-06-01", "%q, %x") == {:error, :invalid_date}
+
+      prove Datix.Date.parse("1, 2019-06-01", "%q, %x") ==
+              {:error,
+               %ValidationError{
+                 reason: :invalid_date,
+                 module: Datix.Date
+               }}
     end
   end
 
@@ -67,18 +98,20 @@ defmodule Datix.DateTest do
           Datix.Date.parse!("2018/12/30", "%Y/%m/%d") == ~D[2018-12-30]
 
     test "raises an error for an invalid format-string" do
-      msg = "invalid format: %o"
-
-      assert_raise ArgumentError, msg, fn ->
+      assert_raise Datix.FormatStringError, ~r/invalid modifier: %o/, fn ->
         Datix.Date.parse!("18", "%o")
       end
     end
 
     test "raises an error for invalid date" do
-      msg = "cannot build date, reason: :invalid_date"
+      assert_raise ValidationError, "date is not valid", fn ->
+        Datix.Date.parse!("2018/99/30", "%Y/%m/%d")
+      end
+    end
 
-      assert_raise ArgumentError, msg, fn ->
-        Datix.Date.parse!("2018/99/30", "%Y/%m/%d") == {:error, :invalid_date}
+    test "raises an error for missing :pivot_year option when using %y" do
+      assert_raise OptionError, "missing option :pivot_year", fn ->
+        Datix.Date.parse!("99", "%y")
       end
     end
   end

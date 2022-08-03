@@ -3,6 +3,8 @@ defmodule Datix.NaiveDateTimeTest do
 
   import Prove
 
+  alias Datix.ValidationError
+
   doctest Datix.NaiveDateTime
 
   describe "parse/3" do
@@ -49,17 +51,13 @@ defmodule Datix.NaiveDateTimeTest do
             Calendar.ISO
 
     test "raises an error for an invalid time" do
-      msg = "cannot build naive-date-time, reason: :invalid_time"
-
-      assert_raise ArgumentError, msg, fn ->
+      assert_raise ValidationError, "time is not valid", fn ->
         Datix.NaiveDateTime.parse!("2018/12/30 99:23:55", "%Y/%m/%d %H:%M:%S")
       end
     end
 
     test "raises an error for an invalid date" do
-      msg = "cannot build naive-date-time, reason: :invalid_date"
-
-      assert_raise ArgumentError, msg, fn ->
+      assert_raise ValidationError, "date is not valid", fn ->
         Datix.NaiveDateTime.parse!("2018/99/30 99:23:55", "%Y/%m/%d %H:%M:%S")
       end
     end

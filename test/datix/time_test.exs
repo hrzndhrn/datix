@@ -3,6 +3,8 @@ defmodule Datix.TimeTest do
 
   import Prove
 
+  alias Datix.ValidationError
+
   doctest Datix.Time
 
   describe "parse/3" do
@@ -20,10 +22,20 @@ defmodule Datix.TimeTest do
     end
 
     batch "returns error-tuple:" do
-      prove Datix.Time.parse("01 pm - 10", "%I %P - %H") == {:error, :invalid_time}
-      prove Datix.Time.parse("01 - 10", "%I - %H") == {:error, :invalid_time}
-      prove Datix.Time.parse("11:24:33.123456789", "%H:%M:%S.%f") == {:error, :invalid_time}
-      prove Datix.Time.parse("99:24:33.123", "%H:%M:%S.%f") == {:error, :invalid_time}
+      prove Datix.Time.parse("01 pm - 10", "%I %P - %H") ==
+              {:error, %ValidationError{reason: :invalid_time, module: Datix.Time}}
+
+      prove Datix.Time.parse("01 - 10", "%I - %H") ==
+              {:error, %ValidationError{reason: :invalid_time, module: Datix.Time}}
+
+      prove Datix.Time.parse("11:24:33.123456789", "%H:%M:%S.%f") ==
+              {:error, %ValidationError{reason: :invalid_time, module: Datix.Time}}
+
+      prove Datix.Time.parse("99:24:33.123", "%H:%M:%S.%f") ==
+              {:error, %ValidationError{reason: :invalid_time, module: Datix.Time}}
+
+      prove Datix.Time.parse("99:24:33 PM", "%I:%M:%S %p") ==
+              {:error, %ValidationError{reason: :invalid_time, module: Datix.Time}}
     end
 
     batch "ignores valid/invalid date:" do
@@ -33,10 +45,10 @@ defmodule Datix.TimeTest do
 
     batch "returns error-tuple for invalid date format:" do
       prove Datix.Time.parse("2020-XX-01 11:24:33", "%Y-%m-%d %H:%M:%S") ==
-              {:error, {:invalid_integer, [modifier: "%m"]}}
+              {:error, %Datix.ParseError{reason: :invalid_integer, modifier: "%m"}}
 
       prove Datix.Time.parse("foo 11:24:33", "%Y-%m-%d %H:%M:%S") ==
-              {:error, {:invalid_integer, [modifier: "%Y"]}}
+              {:error, %Datix.ParseError{reason: :invalid_integer, modifier: "%Y"}}
     end
 
     batch "adds hour, minute and/or second:" do
@@ -51,9 +63,7 @@ defmodule Datix.TimeTest do
           Datix.Time.parse!("11:24:33.555", "%H:%M:%S.%f") == ~T[11:24:33.555]
 
     test "raises an error for invalid time" do
-      msg = "cannot build time, reason: :invalid_time"
-
-      assert_raise ArgumentError, msg, fn ->
+      assert_raise ValidationError, "time is not valid", fn ->
         Datix.Time.parse!("99:24:33.555", "%H:%M:%S.%f")
       end
     end

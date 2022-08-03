@@ -56,13 +56,8 @@ defmodule Datix.DateTime do
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, DateTime.t(), {String.t(), integer()}}
-          | {:error, :invalid_date}
-          | {:error, :invalid_input}
-          | {:error, {:parse_error, expected: String.t(), got: String.t()}}
-          | {:error, {:conflict, [expected: term(), got: term(), modifier: String.t()]}}
-          | {:error, {:invalid_string, [modifier: String.t()]}}
-          | {:error, {:invalid_integer, [modifier: String.t()]}}
-          | {:error, {:invalid_modifier, [modifier: String.t()]}}
+          | {:error,
+             Datix.FormatStringError.t() | Datix.ParseError.t() | Datix.ValidationError.t()}
   def parse(datetime_str, format, opts \\ []) do
     with {:ok, data} <- Datix.strptime(datetime_str, format, opts) do
       new(data, opts)
@@ -93,18 +88,15 @@ defmodule Datix.DateTime do
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: DateTime.t()
   def parse!(datetime_str, format, opts \\ []) do
-    datetime_str
-    |> Datix.strptime!(format, opts)
-    |> new(opts)
-    |> case do
+    case parse(datetime_str, format, opts) do
       {:ok, datetime, {"UTC", 0}} ->
         datetime
 
       {:ok, _datetime, {zone_abbr, _zone_offset}} ->
         raise ArgumentError, "parse!/3 is just defined for UTC, not for #{zone_abbr}"
 
-      {:error, reason} ->
-        raise ArgumentError, "cannot build date-time, reason: #{inspect(reason)}"
+      {:error, error} when is_exception(error) ->
+        raise error
     end
   end
 
