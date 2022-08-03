@@ -3,6 +3,8 @@ defmodule Datix do
   A date-time parser using `Calendar.strftime/3` format strings.
   """
 
+  alias Datix.{FormatStringError, OptionError, ParseError}
+
   @type t :: %{
           optional(:am_pm) => :am | :pm,
           optional(:day) => pos_integer(),
@@ -51,6 +53,14 @@ defmodule Datix do
 
   `format` can be a format string or, since v0.2.0 of the library,
   a **compiled format** as returned by `compile/1`.
+
+  If parsing is successful, this function returns `{:ok, datix}` where `datix` is
+  a map of type `t:t/0`. If you are looking for functions that return Elixir
+  structs (such as `DateTime` and similar), see `Datix.DateTime`, `Datix.Date`,
+  `Datix.Time`, and `Datix.NaiveDateTime`.
+
+  If there's an error, this function returns `{:error, error}` where error
+  is an *exception struct*. You can raise it manually with `raise/1`.
 
   ## Options
 
@@ -106,22 +116,20 @@ defmodule Datix do
       iex> compiled = Datix.compile!("%Y/%m/%d")
       iex> Datix.strptime("2021/01/10", compiled)
       {:ok, %{day: 10, month: 1, year: 2021}}
+
+      iex> Datix.strptime("irrelevant", "%l")
+      {:error, %Datix.FormatStringError{reason: {:invalid_modifier, "%l"}}}
+
   """
   @spec strptime(String.t(), String.t() | compiled(), keyword()) ::
-          {:ok, Datix.t()}
-          | {:error, :invalid_input}
-          | {:error, {:parse_error, expected: String.t(), got: String.t()}}
-          | {:error, {:conflict, [expected: term(), got: term(), modifier: String.t()]}}
-          | {:error, {:invalid_string, [modifier: String.t()]}}
-          | {:error, {:invalid_integer, [modifier: String.t()]}}
-          | {:error, {:invalid_modifier, [modifier: String.t()]}}
+          {:ok, Datix.t()} | {:error, ParseError.t() | FormatStringError.t() | OptionError.t()}
   def strptime(date_time_str, format, opts \\ [])
 
   def strptime(date_time_str, %__MODULE__{format: format}, opts) do
     with {:ok, options} <- options(opts) do
       case parse(format, date_time_str, options, %{}) do
         {:ok, result, ""} -> {:ok, result}
-        {:ok, _result, _rest} -> {:error, :invalid_input}
+        {:ok, _result, _rest} -> {:error, %ParseError{reason: :invalid_input}}
         error -> error
       end
     end
@@ -140,26 +148,8 @@ defmodule Datix do
   @spec strptime!(String.t(), String.t() | compiled(), keyword()) :: Datix.t()
   def strptime!(date_time_str, format, opts \\ []) do
     case strptime(date_time_str, format, opts) do
-      {:ok, data} ->
-        data
-
-      {:error, :invalid_input} ->
-        raise ArgumentError, "invalid input"
-
-      {:error, {:parse_error, expected: exp, got: got}} ->
-        raise ArgumentError, "parse error: expected #{inspect(exp)}, got #{inspect(got)}"
-
-      {:error, {:conflict, [expected: exp, got: got, modifier: mod]}} ->
-        raise ArgumentError, "expected #{inspect(exp)}, got #{inspect(got)} for #{mod}"
-
-      {:error, {:invalid_string, [modifier: mod]}} ->
-        raise ArgumentError, "invalid string for #{mod}"
-
-      {:error, {:invalid_integer, [modifier: mod]}} ->
-        raise ArgumentError, "invalid integer for #{mod}"
-
-      {:error, {:invalid_modifier, [modifier: mod]}} ->
-        raise ArgumentError, "invalid format: #{mod}"
+      {:ok, data} -> data
+      {:error, reason} when is_exception(reason) -> raise reason
     end
   end
 
@@ -190,7 +180,8 @@ defmodule Datix do
   representation is private). You can pass a `t:compiled/0` term to `strptime/3` and
   such.
 
-  If the `format` string is invalid, this function returns `{:error, reason}`.
+  If the `format` string is invalid, this function returns `{:error, reason}`, where
+  `reason` is an *exception struct*.
 
   You can use this function for two reasons:
 
@@ -199,15 +190,13 @@ defmodule Datix do
 
     * You want to *validate* a format string
 
-
-
   """
   @doc since: "0.2.0"
-  @spec compile(String.t()) :: {:ok, compiled()} | {:error, reason :: term()}
+  @spec compile(String.t()) :: {:ok, compiled()} | {:error, FormatStringError.t()}
   def compile(format) when is_binary(format) do
     case compile(format, _acc = []) do
       {:ok, compiled_format} -> {:ok, %__MODULE__{format: compiled_format, original: format}}
-      {:error, reason} -> {:error, reason}
+      {:error, reason} when is_exception(reason) -> {:error, reason}
     end
   end
 
@@ -220,18 +209,15 @@ defmodule Datix do
       Datix.compile!("%Y-%m-%d")
 
       iex> Datix.compile!("%l")
-      ** (ArgumentError) invalid format: %l
+      ** (Datix.FormatStringError) invalid format string because of invalid modifier: %l
 
   """
   @doc since: "0.2.0"
   @spec compile!(String.t()) :: compiled()
   def compile!(format) do
     case compile(format) do
-      {:ok, compiled} ->
-        compiled
-
-      {:error, {:invalid_modifier, [modifier: mod]}} ->
-        raise ArgumentError, "invalid format: #{mod}"
+      {:ok, compiled} -> compiled
+      {:error, reason} when is_exception(reason) -> raise reason
     end
   end
 
@@ -276,13 +262,13 @@ defmodule Datix do
     if format in 'aAbBpPcxXdHIjmMqSufzZyY%' do
       {:ok, modifier, rest}
     else
-      {:error, {:invalid_modifier, modifier: modifier_to_string(modifier)}}
+      {:error, %FormatStringError{reason: {:invalid_modifier, modifier_to_string(modifier)}}}
     end
   end
 
   defp parse([], date_time_rest, _opts, acc), do: {:ok, acc, date_time_rest}
 
-  defp parse(_format, "", _opts, _acc), do: {:error, :invalid_input}
+  defp parse(_format, "", _opts, _acc), do: {:error, %ParseError{reason: :invalid_input}}
 
   defp parse([{:modifier, modifier} | format_rest], date_time_str, opts, acc) do
     with {:ok, new_acc, date_time_rest} <- parse_date_time(modifier, date_time_str, opts, acc) do
@@ -298,7 +284,7 @@ defmodule Datix do
         parse(format_rest, date_time_rest, opts, acc)
 
       _other ->
-        {:error, {:parse_error, expected: exact, got: date_time_str}}
+        {:error, %ParseError{reason: {:expected_exact, exact, _got = date_time_str}}}
     end
   end
 
@@ -379,11 +365,11 @@ defmodule Datix do
   end
 
   defp parse_date_time({?%, _padding, _width}, _date_time_rest, _opts, _acc) do
-    {:error, {:invalid_string, modifier: "%%"}}
+    {:error, %ParseError{reason: :invalid_string, modifier: "%%"}}
   end
 
   defp parse_date_time(modifier, _date_time_str, _opts, _acc) do
-    {:error, {:invalid_modifier, modifier: modifier_to_string(modifier)}}
+    {:error, %FormatStringError{reason: {:invalid_modifier, modifier_to_string(modifier)}}}
   end
 
   defp parse_integer(str, padding, width, int \\ nil)
@@ -404,7 +390,7 @@ defmodule Datix do
     parse_pos_integer(rest, (int || 0) * 10 + (digit - ?0))
   end
 
-  defp parse_pos_integer(_rest, nil), do: {:error, :invalid_integer}
+  defp parse_pos_integer(_rest, nil), do: {:error, %ParseError{reason: :invalid_integer}}
 
   defp parse_pos_integer(rest, int), do: {:ok, int, rest}
 
@@ -428,7 +414,8 @@ defmodule Datix do
     parse_pos_integer(rest, padding, width - 1, (int || 0) * 10 + (digit - ?0))
   end
 
-  defp parse_pos_integer(_str, _padding, _width, _int), do: {:error, :invalid_integer}
+  defp parse_pos_integer(_str, _padding, _width, _int),
+    do: {:error, %ParseError{reason: :invalid_integer}}
 
   defp parse_signed_integer("-" <> str, padding, width) do
     with {:ok, value, rest} <- parse_pos_integer(str, padding, width) do
@@ -439,7 +426,8 @@ defmodule Datix do
   defp parse_signed_integer("+" <> str, padding, width),
     do: parse_pos_integer(str, padding, width)
 
-  defp parse_signed_integer(_str, _padding, _width), do: {:error, :invalid_integer}
+  defp parse_signed_integer(_str, _padding, _width),
+    do: {:error, %ParseError{reason: :invalid_integer}}
 
   defp parse_string(str, padding, list, pos \\ 0)
 
@@ -447,7 +435,7 @@ defmodule Datix do
     parse_string(rest, padding, list, pos)
   end
 
-  defp parse_string(_str, _padding, [], _pos), do: {:error, :invalid_string}
+  defp parse_string(_str, _padding, [], _pos), do: {:error, %ParseError{reason: :invalid_string}}
 
   defp parse_string(str, padding, [item | list], pos) do
     case String.starts_with?(str, item) do
@@ -466,7 +454,8 @@ defmodule Datix do
     parse_upcase_string(rest, padding, [char | acc])
   end
 
-  defp parse_upcase_string(_rest, _padding, []), do: {:error, :invalid_string}
+  defp parse_upcase_string(_rest, _padding, []),
+    do: {:error, %ParseError{reason: :invalid_string}}
 
   defp parse_upcase_string(rest, _padding, acc) do
     {:ok, acc |> Enum.reverse() |> IO.iodata_to_binary(), rest}
@@ -495,12 +484,8 @@ defmodule Datix do
     end
   end
 
-  defp error({:error, {:conflict, {expected, got}}}, modifier) do
-    {:error, {:conflict, expected: expected, got: got, modifier: modifier_to_string(modifier)}}
-  end
-
-  defp error({:error, reason}, modifier) do
-    {:error, {reason, modifier: modifier_to_string(modifier)}}
+  defp error({:error, %ParseError{} = error}, modifier) do
+    {:error, %ParseError{error | modifier: modifier_to_string(modifier)}}
   end
 
   defp zone_offset(value) do
@@ -521,7 +506,7 @@ defmodule Datix do
   defp put(acc, key, value) when is_atom(key) do
     case Map.fetch(acc, key) do
       {:ok, ^value} -> {:ok, acc}
-      {:ok, expected} -> {:error, {:conflict, {expected, value}}}
+      {:ok, expected} -> {:error, %ParseError{reason: {:conflict, expected, value}}}
       :error -> {:ok, Map.put(acc, key, value)}
     end
   end
@@ -613,7 +598,7 @@ defmodule Datix do
       cond do
         Map.has_key?(acc, key) -> {:cont, {:ok, %{acc | key => value}}}
         key in extra_allowed_keys -> {:cont, {:ok, acc}}
-        true -> {:halt, {:error, {:unknown, option: key}}}
+        true -> {:halt, {:error, %OptionError{reason: :unknown, option: key}}}
       end
     end)
   end

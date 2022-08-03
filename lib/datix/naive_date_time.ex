@@ -56,13 +56,9 @@ defmodule Datix.NaiveDateTime do
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, NaiveDateTime.t()}
-          | {:error, :invalid_date}
-          | {:error, :invalid_input}
-          | {:error, {:parse_error, expected: String.t(), got: String.t()}}
-          | {:error, {:conflict, [expected: term(), got: term(), modifier: String.t()]}}
-          | {:error, {:invalid_string, [modifier: String.t()]}}
-          | {:error, {:invalid_integer, [modifier: String.t()]}}
-          | {:error, {:invalid_modifier, [modifier: String.t()]}}
+          | {:error, Datix.ValidationError.t()}
+          | {:error, Datix.FormatStringError.t()}
+          | {:error, Datix.ParseError.t()}
   def parse(naive_datetime_str, format, opts \\ []) do
     with {:ok, data} <- Datix.strptime(naive_datetime_str, format, opts) do
       new(data, opts)
@@ -75,15 +71,9 @@ defmodule Datix.NaiveDateTime do
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: NaiveDateTime.t()
   def parse!(naive_datetime_str, format, opts \\ []) do
-    naive_datetime_str
-    |> Datix.strptime!(format, opts)
-    |> new(opts)
-    |> case do
-      {:ok, date} ->
-        date
-
-      {:error, reason} ->
-        raise ArgumentError, "cannot build naive-date-time, reason: #{inspect(reason)}"
+    case parse(naive_datetime_str, format, opts) do
+      {:ok, naive_dt} -> naive_dt
+      {:error, error} when is_exception(error) -> raise error
     end
   end
 

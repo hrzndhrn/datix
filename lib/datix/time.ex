@@ -3,6 +3,8 @@ defmodule Datix.Time do
   A `Time` parser using `Calendar.strftime` format-string.
   """
 
+  alias Datix.ValidationError
+
   @doc """
   Parses a time string according to the given `format`.
 
@@ -34,13 +36,8 @@ defmodule Datix.Time do
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, Time.t()}
-          | {:error, :invalid_time}
-          | {:error, :invalid_input}
-          | {:error, {:parse_error, expected: String.t(), got: String.t()}}
-          | {:error, {:conflict, [expected: term(), got: term(), modifier: String.t()]}}
-          | {:error, {:invalid_string, [modifier: String.t()]}}
-          | {:error, {:invalid_integer, [modifier: String.t()]}}
-          | {:error, {:invalid_modifier, [modifier: String.t()]}}
+          | {:error, Datix.FormatStringError.t()}
+          | {:error, Datix.ParseError.t()}
   def parse(time_str, format, opts \\ []) do
     with {:ok, data} <- Datix.strptime(time_str, format, sweep(opts)) do
       new(data, opts)
@@ -53,15 +50,9 @@ defmodule Datix.Time do
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: Time.t()
   def parse!(time_str, format, opts \\ []) do
-    time_str
-    |> Datix.strptime!(format, sweep(opts))
-    |> new(opts)
-    |> case do
-      {:ok, time} ->
-        time
-
-      {:error, reason} ->
-        raise ArgumentError, "cannot build time, reason: #{inspect(reason)}"
+    case parse(time_str, format, opts) do
+      {:ok, time} -> time
+      {:error, error} when is_exception(error) -> raise error
     end
   end
 
@@ -70,24 +61,38 @@ defmodule Datix.Time do
     with {:ok, hour_24} <- to_hour_24(hour_12, Map.get(data, :am_pm)) do
       case hour == hour_24 do
         true -> data |> Map.delete(:hour_12) |> new(opts)
-        false -> {:error, :invalid_time}
+        false -> {:error, %ValidationError{reason: :invalid_time, module: __MODULE__}}
       end
     end
   end
 
   def new(%{hour: h, minute: m, second: s, microsecond: ms}, opts) do
-    Time.new(h, m, s, microsecond(ms), Datix.calendar(opts))
+    case Time.new(h, m, s, microsecond(ms), Datix.calendar(opts)) do
+      {:ok, time} ->
+        {:ok, time}
+
+      {:error, :invalid_time} ->
+        {:error, %ValidationError{reason: :invalid_time, module: __MODULE__}}
+    end
   end
 
   def new(%{hour_12: h_12, minute: m, second: s, microsecond: ms} = data, opts) do
     with {:ok, h} <- to_hour_24(h_12, Map.get(data, :am_pm)) do
-      Time.new(h, m, s, microsecond(ms), Datix.calendar(opts))
+      case Time.new(h, m, s, microsecond(ms), Datix.calendar(opts)) do
+        {:ok, time} ->
+          {:ok, time}
+
+        {:error, :invalid_time} ->
+          {:error, %ValidationError{reason: :invalid_time, module: __MODULE__}}
+      end
     end
   end
 
   def new(data, opts), do: data |> Datix.assume(Time) |> new(opts)
 
-  defp to_hour_24(_hour_12, nil), do: {:error, :invalid_time}
+  defp to_hour_24(_hour_12, nil),
+    do: {:error, %ValidationError{reason: :invalid_time, module: __MODULE__}}
+
   defp to_hour_24(12, :am), do: {:ok, 0}
   defp to_hour_24(12, :pm), do: {:ok, 12}
   defp to_hour_24(hour_12, :am), do: {:ok, hour_12}

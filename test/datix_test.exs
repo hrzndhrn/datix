@@ -1,6 +1,8 @@
 defmodule DatixTest do
   use ExUnit.Case
 
+  alias Datix.{OptionError, ParseError}
+
   doctest Datix
 
   describe "strptime/3" do
@@ -15,25 +17,28 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid input" do
-      assert Datix.strptime("foobar", "foo") == {:error, :invalid_input}
+      assert Datix.strptime("foobar", "foo") ==
+               {:error, %ParseError{reason: :invalid_input}}
 
       assert Datix.strptime("foo", "foobar") ==
-               {:error, {:parse_error, expected: "foobar", got: "foo"}}
+               {:error, %ParseError{reason: {:expected_exact, "foobar", "foo"}}}
     end
 
     test "returns error tuple for different string without modifiers" do
       assert Datix.strptime("foobar", "foopar") ==
-               {:error, {:parse_error, expected: "foopar", got: "foobar"}}
+               {:error, %ParseError{reason: {:expected_exact, "foopar", "foobar"}}}
     end
 
     test "returns an error tuple for an unknown option" do
-      assert Datix.strptime("", "", foo: :bar) == {:error, {:unknown, option: :foo}}
+      assert Datix.strptime("", "", foo: :bar) ==
+               {:error, %OptionError{reason: :unknown, option: :foo}}
     end
 
     # Invalid modifier
 
     test "returns error tuple for invalid modifier" do
-      assert Datix.strptime("foo", "%l") == {:error, {:invalid_modifier, [modifier: "%l"]}}
+      assert Datix.strptime("foo", "%l") ==
+               {:error, %Datix.FormatStringError{reason: {:invalid_modifier, "%l"}}}
     end
 
     # %a - Abbreviated name of day
@@ -43,7 +48,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %a" do
-      assert Datix.strptime("Xan", "%a") == {:error, {:invalid_string, [modifier: "%a"]}}
+      assert Datix.strptime("Xan", "%a") ==
+               {:error, %ParseError{reason: :invalid_string, modifier: "%a"}}
     end
 
     test "parses with format-string '%06a'" do
@@ -51,7 +57,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %06a" do
-      assert Datix.strptime("000foo", "%06a") == {:error, {:invalid_string, [modifier: "%06a"]}}
+      assert Datix.strptime("000foo", "%06a") ==
+               {:error, %ParseError{reason: :invalid_string, modifier: "%06a"}}
     end
 
     # %A - Full name of day
@@ -61,7 +68,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %A" do
-      assert Datix.strptime("Xan", "%A") == {:error, {:invalid_string, [modifier: "%A"]}}
+      assert Datix.strptime("Xan", "%A") ==
+               {:error, %ParseError{reason: :invalid_string, modifier: "%A"}}
     end
 
     # %b - Abbreviated month name
@@ -71,7 +79,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %b" do
-      assert Datix.strptime("Xan", "%b") == {:error, {:invalid_string, [modifier: "%b"]}}
+      assert Datix.strptime("Xan", "%b") ==
+               {:error, %ParseError{reason: :invalid_string, modifier: "%b"}}
     end
 
     # %B - Full month name
@@ -81,7 +90,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %B" do
-      assert Datix.strptime("Xan", "%B") == {:error, {:invalid_string, [modifier: "%B"]}}
+      assert Datix.strptime("Xan", "%B") ==
+               {:error, %ParseError{reason: :invalid_string, modifier: "%B"}}
     end
 
     # %c - Preferred date+time representation
@@ -97,7 +107,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %c" do
-      assert Datix.strptime("2020-foo", "%c") == {:error, {:invalid_integer, [modifier: "%m"]}}
+      assert Datix.strptime("2020-foo", "%c") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%m"}}
     end
 
     # %d - Day of the month
@@ -107,7 +118,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %d" do
-      assert Datix.strptime("2foo", "%d") == {:error, {:invalid_integer, [modifier: "%d"]}}
+      assert Datix.strptime("2foo", "%d") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%d"}}
     end
 
     # %f - Microseconds
@@ -121,7 +133,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %f" do
-      assert Datix.strptime("xy", "x%fy") == {:error, {:invalid_integer, [modifier: "%f"]}}
+      assert Datix.strptime("xy", "x%fy") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%f"}}
     end
 
     # %H - Hour using a 24-hour clock
@@ -131,11 +144,13 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %H" do
-      assert Datix.strptime("4", "%H") == {:error, {:invalid_integer, [modifier: "%H"]}}
+      assert Datix.strptime("4", "%H") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%H"}}
     end
 
     test "returns error tuple for negative value for modifier %H" do
-      assert Datix.strptime("-14", "%H") == {:error, {:invalid_integer, [modifier: "%H"]}}
+      assert Datix.strptime("-14", "%H") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%H"}}
     end
 
     # %I - Hour using a 12-hour clock
@@ -181,7 +196,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %q" do
-      assert Datix.strptime("-", "%q") == {:error, {:invalid_integer, [modifier: "%q"]}}
+      assert Datix.strptime("-", "%q") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%q"}}
     end
 
     test "parses with format-string '%03q'" do
@@ -199,7 +215,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %S" do
-      assert Datix.strptime("9-", "%S") == {:error, {:invalid_integer, [modifier: "%S"]}}
+      assert Datix.strptime("9-", "%S") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%S"}}
     end
 
     # %u - Day of the week
@@ -242,7 +259,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %y" do
-      assert Datix.strptime("1A", "%y") == {:error, {:invalid_integer, [modifier: "%y"]}}
+      assert Datix.strptime("1A", "%y") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%y"}}
     end
 
     # %Y - Year
@@ -267,7 +285,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %z" do
-      assert Datix.strptime("foo", "%z") == {:error, {:invalid_integer, [modifier: "%z"]}}
+      assert Datix.strptime("foo", "%z") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%z"}}
     end
 
     # %Z - Time zone abbreviation
@@ -278,7 +297,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %Z" do
-      assert Datix.strptime("foo", "%Z") == {:error, {:invalid_string, [modifier: "%Z"]}}
+      assert Datix.strptime("foo", "%Z") ==
+               {:error, %ParseError{reason: :invalid_string, modifier: "%Z"}}
     end
 
     # %% - Literal "%" character
@@ -321,49 +341,53 @@ defmodule DatixTest do
 
     test "returns error tuple for conflicting days of week" do
       assert Datix.strptime("Wednesday, Fri", "%A, %a") ==
-               {:error, {:conflict, [expected: 3, got: 5, modifier: "%a"]}}
+               {:error, %ParseError{reason: {:conflict, 3, 5}, modifier: "%a"}}
     end
 
     test "returns error tuple for conflicting days" do
       assert Datix.strptime("02, 03", "%d, %d") ==
-               {:error, {:conflict, [expected: 2, got: 3, modifier: "%d"]}}
+               {:error, %ParseError{reason: {:conflict, 2, 3}, modifier: "%d"}}
     end
 
     test "returns error tuple for conflicting am/pm" do
       assert Datix.strptime("AM, pm", "%p, %P") ==
-               {:error, {:conflict, [expected: :am, got: :pm, modifier: "%P"]}}
+               {:error, %ParseError{reason: {:conflict, :am, :pm}, modifier: "%P"}}
     end
   end
 
   describe "strptime!/3" do
-    test "raisee an error for an invalid sting" do
-      msg = "invalid string for %a"
+    test "returns the parsed result if valid" do
+      assert Datix.strptime!("15:30:00", "%H:%M:%S") == %{hour: 15, minute: 30, second: 0}
+    end
 
-      assert_raise ArgumentError, msg, fn ->
+    test "raises an error tuple for an unknown option" do
+      assert_raise OptionError, "unknown option :foo", fn ->
+        Datix.strptime!("", "", foo: :bar)
+      end
+    end
+
+    test "raises an error for an invalid sting" do
+      assert_raise ParseError, "invalid string for %a", fn ->
         Datix.strptime!("Xan", "%a")
       end
     end
 
-    test "raisee an error for an invalid integer" do
-      msg = "invalid integer for %d"
-
-      assert_raise ArgumentError, msg, fn ->
+    test "raises an error for an invalid integer" do
+      assert_raise ParseError, "invalid integer for %d", fn ->
         Datix.strptime!("1X", "%d")
       end
     end
 
-    test "raisee an error for an invalid input" do
-      msg = "invalid input"
-
-      assert_raise ArgumentError, msg, fn ->
+    test "raises an error for an invalid input" do
+      assert_raise ParseError, "invalid input", fn ->
         Datix.strptime!("10a", "%d")
       end
     end
 
-    test "raisee an error for a parse error" do
-      msg = ~s|parse error: expected "b", got "a"|
+    test "raises an error for a parse error" do
+      msg = ~s|expected exact string "b", got: "a"|
 
-      assert_raise ArgumentError, msg, fn ->
+      assert_raise ParseError, msg, fn ->
         Datix.strptime!("a", "b")
       end
     end
@@ -371,7 +395,7 @@ defmodule DatixTest do
     test "raises an error for conflicting data" do
       msg = "expected 3, got 5 for %a"
 
-      assert_raise ArgumentError, msg, fn ->
+      assert_raise ParseError, msg, fn ->
         Datix.strptime!("Wednesday, Fri", "%A, %a")
       end
     end
@@ -387,7 +411,8 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid modifier" do
-      assert {:error, {:invalid_modifier, [modifier: "%l"]}} = Datix.compile("%l")
+      assert {:error, %Datix.FormatStringError{reason: {:invalid_modifier, "%l"}}} =
+               Datix.compile("%l")
     end
 
     modifiers_with_defaults = [
@@ -468,7 +493,7 @@ defmodule DatixTest do
     end
 
     test "raises on invalid input" do
-      assert_raise ArgumentError, "invalid format: %l", fn ->
+      assert_raise Datix.FormatStringError, ~r/invalid modifier: %l/, fn ->
         Datix.compile!("%l")
       end
     end

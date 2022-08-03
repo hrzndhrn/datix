@@ -3,6 +3,8 @@ defmodule Datix.Date do
   A `Date` parser using `Calendar.strftime/3` format strings.
   """
 
+  alias Datix.{OptionError, ValidationError}
+
   @doc """
   Parses a date string according to the given `format`.
 
@@ -34,7 +36,7 @@ defmodule Datix.Date do
       `%y` is used. `%y` represents a 2-digit year, but Datix doesn't assume anything
       about which *century* such year refers to. For this reason, the `:pivot_year`
       option is required whenever `%y` is present in the format string; if not
-      present, this function returns `{:error, :missing_pivot_year_option}`.
+      present, this function returns `{:error, %Datix.OptionError{}}`.
       For example, if `pivot_year: 65`, then the 2-digit year `64` and lower will
       refer to the current century (`2064` and so on at the time of writing this),
       while the 2-digit year `65` and higher will refer to the previous century
@@ -64,7 +66,7 @@ defmodule Datix.Date do
       {:ok, ~D[1918-01-01]}
 
       iex> Datix.Date.parse("18", "%y")
-      {:error, :missing_pivot_year_option}
+      {:error, %Datix.OptionError{reason: :missing, option: :pivot_year}}
 
       iex> Datix.Date.parse("", "")
       {:ok, ~D[0000-01-01]}
@@ -78,19 +80,16 @@ defmodule Datix.Date do
 
       iex> Datix.Date.parse("Fr, 1.4.2020", "%a, %-d.%-m.%Y",
       ...>   abbreviated_day_of_week_names: ~w(Mo Di Mi Do Fr Sa So))
-      {:error, :invalid_date}
+      {:error, %Datix.ValidationError{reason: :invalid_date, module: Datix.Date}}
 
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, Date.t()}
-          | {:error, :invalid_date}
-          | {:error, :invalid_input}
-          | {:error, :missing_pivot_year_option}
-          | {:error, {:parse_error, expected: String.t(), got: String.t()}}
-          | {:error, {:conflict, [expected: term(), got: term(), modifier: String.t()]}}
-          | {:error, {:invalid_string, [modifier: String.t()]}}
-          | {:error, {:invalid_integer, [modifier: String.t()]}}
-          | {:error, {:invalid_modifier, [modifier: String.t()]}}
+          | {:error,
+             Datix.FormatStringError.t()
+             | Datix.ParseError.t()
+             | Datix.ValidationError.t()
+             | Datix.OptionError.t()}
   def parse(date_str, format, opts \\ []) do
     with {:ok, data} <- Datix.strptime(date_str, format, opts) do
       new(data, opts)
@@ -103,22 +102,20 @@ defmodule Datix.Date do
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: Date.t()
   def parse!(date_str, format, opts \\ []) do
-    date_str
-    |> Datix.strptime!(format, opts)
-    |> new(opts)
-    |> case do
-      {:ok, date} ->
-        date
-
-      {:error, reason} ->
-        raise ArgumentError, "cannot build date, reason: #{inspect(reason)}"
+    case parse(date_str, format, opts) do
+      {:ok, date} -> date
+      {:error, error} when is_exception(error) -> raise error
     end
   end
 
   @doc false
   def new(%{year: year, month: month, day: day} = data, opts) do
-    with {:ok, date} <- Date.new(year, month, day, Datix.calendar(opts)) do
-      validate(date, data)
+    case Date.new(year, month, day, Datix.calendar(opts)) do
+      {:ok, date} ->
+        validate(date, data)
+
+      {:error, :invalid_date} ->
+        {:error, %ValidationError{reason: :invalid_date, module: __MODULE__}}
     end
   end
 
@@ -140,7 +137,7 @@ defmodule Datix.Date do
         |> new(opts)
 
       :error ->
-        {:error, :missing_pivot_year_option}
+        {:error, %OptionError{reason: :missing, option: :pivot_year}}
     end
   end
 
@@ -172,21 +169,21 @@ defmodule Datix.Date do
   defp validate(date, [{:day_of_week, day_of_week} | rest]) do
     case Date.day_of_week(date) do
       ^day_of_week -> validate(date, rest)
-      _day_of_week -> {:error, :invalid_date}
+      _day_of_week -> {:error, %ValidationError{reason: :invalid_date, module: __MODULE__}}
     end
   end
 
   defp validate(date, [{:day_of_year, day_of_jear} | rest]) do
     case Date.day_of_year(date) do
       ^day_of_jear -> validate(date, rest)
-      _day_of_jear -> {:error, :invalid_date}
+      _day_of_jear -> {:error, %ValidationError{reason: :invalid_date, module: __MODULE__}}
     end
   end
 
   defp validate(date, [{:quarter, quarter} | rest]) do
     case Date.quarter_of_year(date) do
       ^quarter -> validate(date, rest)
-      _quarter -> {:error, :invalid_date}
+      _quarter -> {:error, %ValidationError{reason: :invalid_date, module: __MODULE__}}
     end
   end
 end
