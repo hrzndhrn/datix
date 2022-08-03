@@ -1,12 +1,12 @@
 defmodule Datix.Date do
   @moduledoc """
-  A `Date` parser using `Calendar.strftime` format string.
+  A `Date` parser using `Calendar.strftime/3` format strings.
   """
 
   @doc """
   Parses a date string according to the given `format`.
 
-  See the `Calendar.strftime` documentation for how to specify a format-string.
+  See the `Calendar.strftime/3` documentation for how to specify a format-string.
 
   ## Options
 
@@ -30,6 +30,16 @@ defmodule Datix.Date do
       option is not received it defaults to a list of abbreviated day names in
       English
 
+    * `:pivot_year` - a 2-digit year that represents the *pivot year* to use when
+      `%y` is used. `%y` represents a 2-digit year, but Datix doesn't assume anything
+      about which *century* such year refers to. For this reason, the `:pivot_year`
+      option is required whenever `%y` is present in the format string; if not
+      present, this function returns `{:error, :missing_pivot_year_option}`.
+      For example, if `pivot_year: 65`, then the 2-digit year `64` and lower will
+      refer to the current century (`2064` and so on at the time of writing this),
+      while the 2-digit year `65` and higher will refer to the previous century
+      (`1965` and so on).
+
   Missing values will be set to minimum.
 
   ## Examples
@@ -47,8 +57,14 @@ defmodule Datix.Date do
       iex> Datix.Date.parse("2021/01/10", "%x", preferred_date: "%Y/%m/%d")
       {:ok, ~D[2021-01-10]}
 
+      iex> Datix.Date.parse("18", "%y", pivot_year: 50)
+      {:ok, ~D[2018-01-01]}
+
+      iex> Datix.Date.parse("18", "%y", pivot_year: 15)
+      {:ok, ~D[1918-01-01]}
+
       iex> Datix.Date.parse("18", "%y")
-      {:ok, ~D[0018-01-01]}
+      {:error, :missing_pivot_year_option}
 
       iex> Datix.Date.parse("", "")
       {:ok, ~D[0000-01-01]}
@@ -63,11 +79,13 @@ defmodule Datix.Date do
       iex> Datix.Date.parse("Fr, 1.4.2020", "%a, %-d.%-m.%Y",
       ...>   abbreviated_day_of_week_names: ~w(Mo Di Mi Do Fr Sa So))
       {:error, :invalid_date}
+
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, Date.t()}
           | {:error, :invalid_date}
           | {:error, :invalid_input}
+          | {:error, :missing_pivot_year_option}
           | {:error, {:parse_error, expected: String.t(), got: String.t()}}
           | {:error, {:conflict, [expected: term(), got: term(), modifier: String.t()]}}
           | {:error, {:invalid_string, [modifier: String.t()]}}
@@ -105,10 +123,25 @@ defmodule Datix.Date do
   end
 
   def new(%{year_2_digit: year, month: _month, day: _day} = data, opts) do
-    data
-    |> Map.put(:year, year)
-    |> Map.delete(:year_2_digit)
-    |> new(opts)
+    case Keyword.fetch(opts, :pivot_year) do
+      {:ok, pivot_year} ->
+        current_century = div(DateTime.utc_now(Datix.calendar(opts)).year, 100)
+
+        year =
+          cond do
+            year < 0 -> year
+            year <= pivot_year -> current_century * 100 + year
+            true -> (current_century - 1) * 100 + year
+          end
+
+        data
+        |> Map.put(:year, year)
+        |> Map.delete(:year_2_digit)
+        |> new(opts)
+
+      :error ->
+        {:error, :missing_pivot_year_option}
+    end
   end
 
   def new(data, opts), do: data |> Datix.assume(Date) |> new(opts)
