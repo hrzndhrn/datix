@@ -17,7 +17,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:datix, "~> 0.1"}
+    {:datix, "~> 0.3"}
   ]
 end
 ```
