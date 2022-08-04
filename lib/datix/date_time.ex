@@ -1,17 +1,17 @@
 defmodule Datix.DateTime do
   @moduledoc """
-  A `DateTime` parser using `Calendar.strftime` format-string.
+  A `DateTime` parser using `Calendar.strftime/3` format string.
   """
 
+  alias Datix.ValidationError
+
   @doc """
-  Parses a datetime string according to the given `format`.
+  Parses a datetime string into a `DateTime` according to the given `format`.
 
-  See the `Calendar.strftime` documentation for how to specify a format-string.
+  See the `Calendar.strftime/3` documentation for how to specify a format string.
 
-  The `:ok` tuple contains always an UTC datetime and a tuple with the time zone
-  infos. If the format string contains an offset (`%z`), this is added to the
-  datetime. If the format string contains only the time zone abbreviation (`%Z`),
-  the offset in the time zone info tuple is set to nil.
+  When the format string contains an offset (`%z`) or a timezone abbreviation (`%Z`),
+  then the `:time_zone` option is required. See below for more information on the option.
 
   ## Options
 
@@ -42,22 +42,50 @@ defmodule Datix.DateTime do
     * `:am_pm_names` - a keyword list with the names of the period of the day,
       defaults to `[am: "am", pm: "pm"]`.
 
+    * `:pivot_year` - (since v0.2.0) a 2-digit year that represents the *pivot year* to use when
+      `%y` is used. `%y` represents a 2-digit year, but Datix doesn't assume anything
+      about which *century* such year refers to. For this reason, the `:pivot_year`
+      option is required whenever `%y` is present in the format string; if not
+      present, this function returns `{:error, :missing_pivot_year_option}`.
+      For example, if `pivot_year: 65`, then the 2-digit year `64` and lower will
+      refer to the current century (`2064` and so on at the time of writing this),
+      while the 2-digit year `65` and higher will refer to the previous century
+      (`1965` and so on).
+
+    * `:time_zone` - (since v0.3.0) a function that receives the parsed datetime as 
+      `NaiveDateTime`, the zone abbreviation, and the offset to handle the time zone 
+      and returns an `:ok` tuple with the `DateTime` or an `:error` tuple with 
+      `Datix.ValidationError`. Defaults to a function handling only "UTC".
+
   ## Examples
 
       iex> Datix.DateTime.parse("2021/01/10 12:14:24", "%Y/%m/%d %H:%M:%S")
-      {:ok, ~U[2021-01-10 12:14:24Z], {"UTC", 0}}
+      {:ok, ~U[2021-01-10 12:14:24Z]}
 
       iex> format = Datix.compile!("%Y/%m/%d %H:%M:%S")
       iex> Datix.DateTime.parse("2021/01/10 12:14:24", format)
-      {:ok, ~U[2021-01-10 12:14:24Z], {"UTC", 0}}
+      {:ok, ~U[2021-01-10 12:14:24Z]}
 
       iex> Datix.DateTime.parse("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
-      {:ok, ~U[2018-06-27 09:23:55Z], {"CEST", 7_200}}
+      {:error, %Datix.ValidationError{module: Datix.DateTime, reason: {:unknown_timezone_abbr, "CEST"}}}
+
+
+  If you need to parse non-UTC datetimes, you'll have to pass the `:time_zone` option.
+
+      tz_fun = fn naive_datetime, abbr, offset ->
+        {:ok, naive_datetime |> DateTime.from_naive!(convert_abbr(abbr)) |> DateTime.add(-offset)}
+      end
+
+      Datix.DateTime.parse("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z", time_zone: tz_fun)
+
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
-          {:ok, DateTime.t(), {String.t(), integer()}}
+          {:ok, DateTime.t()}
           | {:error,
-             Datix.FormatStringError.t() | Datix.ParseError.t() | Datix.ValidationError.t()}
+             Datix.FormatStringError.t()
+             | Datix.ParseError.t()
+             | Datix.ValidationError.t()
+             | Datix.OptionError.t()}
   def parse(datetime_str, format, opts \\ []) do
     with {:ok, data} <- Datix.strptime(datetime_str, format, opts) do
       new(data, opts)
@@ -84,50 +112,37 @@ defmodule Datix.DateTime do
       ~U[2018-06-27 11:23:55Z]
 
       iex> Datix.DateTime.parse!("2018/06/27 11:23:55 CEST+0200", "%Y/%m/%d %H:%M:%S %Z%z")
-      ** (ArgumentError) parse!/3 is just defined for UTC, not for CEST
+      ** (Datix.ValidationError) unknown timezone abbreviation: CEST
+
   """
   @spec parse!(String.t(), String.t() | Datix.compiled(), list()) :: DateTime.t()
   def parse!(datetime_str, format, opts \\ []) do
     case parse(datetime_str, format, opts) do
-      {:ok, datetime, {"UTC", 0}} ->
-        datetime
-
-      {:ok, _datetime, {zone_abbr, _zone_offset}} ->
-        raise ArgumentError, "parse!/3 is just defined for UTC, not for #{zone_abbr}"
-
-      {:error, error} when is_exception(error) ->
-        raise error
+      {:ok, datetime} -> datetime
+      {:error, error} when is_exception(error) -> raise error
     end
   end
 
   @doc false
   def new(data, opts) do
     with {:ok, date} <- Datix.Date.new(data, opts),
-         {:ok, time} <- Datix.Time.new(data, opts),
-         {:ok, datetime} <- DateTime.new(date, time) do
-      time_zone(datetime, data)
+         {:ok, time} <- Datix.Time.new(data, opts) do
+      time_zone_fun = Keyword.get(opts, :time_zone, &default_time_zone_fun/3)
+      naive_datetime = NaiveDateTime.new!(date, time)
+      time_zone_fun.(naive_datetime, Map.get(data, :zone_abbr), Map.get(data, :zone_offset))
     end
   end
 
-  defp time_zone(datetime, data) do
-    case {Map.get(data, :zone_abbr), Map.get(data, :zone_offset)} do
-      {nil, nil} ->
-        {:ok, datetime, {"UTC", 0}}
-
-      {nil, 0} ->
-        {:ok, datetime, {"UTC", 0}}
-
-      {nil, zone_offset} = zone ->
-        {:ok, DateTime.add(datetime, -1 * zone_offset), zone}
-
+  defp default_time_zone_fun(naive_datetime, zone_abbr, offset) do
+    case {zone_abbr || "UTC", offset || 0} do
       {"UTC", 0} ->
-        {:ok, datetime, {"UTC", 0}}
+        {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
 
-      {_zone_abbr, nil} = zone ->
-        {:ok, datetime, zone}
+      {"UTC", offset} when is_integer(offset) and offset != 0 ->
+        {:ok, naive_datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.add(-offset)}
 
-      {_zone_abbr, zone_offset} = zone ->
-        {:ok, DateTime.add(datetime, -1 * zone_offset), zone}
+      {abbr, _offset} ->
+        {:error, %ValidationError{reason: {:unknown_timezone_abbr, abbr}, module: Datix.DateTime}}
     end
   end
 end

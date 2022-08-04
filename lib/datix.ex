@@ -590,7 +590,7 @@ defmodule Datix do
       abbreviated_day_of_week_names: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     }
 
-    extra_allowed_keys = [:pivot_year]
+    extra_allowed_keys = [:pivot_year, :time_zone]
 
     opts
     |> Keyword.delete(:calendar)

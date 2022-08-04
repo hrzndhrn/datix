@@ -4,12 +4,11 @@ defmodule Datix.NaiveDateTime do
   """
 
   @doc """
-  Parses a datetime string according to the given `format`.
+  Parses a datetime string into a `NaiveDateTime` according to the given `format`.
 
-  See the `Calendar.strftime` documentation for how to specify a format-string.
+  See the `Calendar.strftime/3` documentation for how to specify a format string.
 
-  The `:ok` tuple contains always an UTC datetime and a tuple with the time zone
-  infos.
+  **Time zone information is ignored**.
 
   ## Options
 
@@ -50,8 +49,6 @@ defmodule Datix.NaiveDateTime do
       while the 2-digit year `65` and higher will refer to the previous century
       (`1965` and so on).
 
-  Time zone infos will be ignored.
-
   ## Examples
 
       iex> Datix.NaiveDateTime.parse("2021/01/10 12:14:24", "%Y/%m/%d %H:%M:%S")
@@ -69,12 +66,15 @@ defmodule Datix.NaiveDateTime do
 
       iex> Datix.NaiveDateTime.parse("21/11/22", "%y/%m/%d", pivot_year: 20)
       {:ok, ~N[1921-11-22 00:00:00]}
+
   """
   @spec parse(String.t(), String.t() | Datix.compiled(), list()) ::
           {:ok, NaiveDateTime.t()}
-          | {:error, Datix.ValidationError.t()}
-          | {:error, Datix.FormatStringError.t()}
-          | {:error, Datix.ParseError.t()}
+          | {:error,
+             Datix.ValidationError.t()
+             | Datix.FormatStringError.t()
+             | Datix.ParseError.t()
+             | Datix.OptionError.t()}
   def parse(naive_datetime_str, format, opts \\ []) do
     with {:ok, data} <- Datix.strptime(naive_datetime_str, format, opts) do
       new(data, opts)
