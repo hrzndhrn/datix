@@ -52,7 +52,10 @@ defmodule Datix.DateTime do
       while the 2-digit year `65` and higher will refer to the previous century
       (`1965` and so on).
 
-    * `:time_zone` - (since v0.3.0) TODO
+    * `:time_zone` - (since v0.3.0) a function that receives the parsed datetime as 
+      `NaiveDateTime`, the zone abbreviation, and the offset to handle the time zone 
+      and returns an `:ok` tuple with the `DateTime` or an `:error` tuple with 
+      `Datix.ValidationError`. Defaults to a function handling only "UTC".
 
   ## Examples
 
