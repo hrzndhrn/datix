@@ -118,8 +118,7 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %d" do
-      assert Datix.strptime("2foo", "%d") ==
-               {:error, %ParseError{reason: :invalid_integer, modifier: "%d"}}
+      assert Datix.strptime("2foo", "%d") == {:error, %ParseError{reason: :invalid_input}}
     end
 
     # %f - Microseconds
@@ -141,10 +140,11 @@ defmodule DatixTest do
 
     test "parses with format-string '%H'" do
       assert Datix.strptime("54", "%H") == {:ok, %{hour: 54}}
+      assert Datix.strptime("4", "%H") == {:ok, %{hour: 4}}
     end
 
     test "returns error tuple for invalid value for modifier %H" do
-      assert Datix.strptime("4", "%H") ==
+      assert Datix.strptime("foo", "%H") ==
                {:error, %ParseError{reason: :invalid_integer, modifier: "%H"}}
     end
 
@@ -162,6 +162,11 @@ defmodule DatixTest do
     # %j - Day of the year
 
     test "parses with format-string '%j'" do
+      assert Datix.strptime("1", "%j") == {:ok, %{day_of_year: 1}}
+      assert Datix.strptime("01", "%j") == {:ok, %{day_of_year: 1}}
+      assert Datix.strptime("001", "%j") == {:ok, %{day_of_year: 1}}
+      assert Datix.strptime("15", "%j") == {:ok, %{day_of_year: 15}}
+      assert Datix.strptime("015", "%j") == {:ok, %{day_of_year: 15}}
       assert Datix.strptime("154", "%j") == {:ok, %{day_of_year: 154}}
     end
 
@@ -169,12 +174,22 @@ defmodule DatixTest do
 
     test "parses with format-string '%m'" do
       assert Datix.strptime("33", "%m") == {:ok, %{month: 33}}
+      assert Datix.strptime("03", "%m") == {:ok, %{month: 3}}
+      assert Datix.strptime("3", "%m") == {:ok, %{month: 3}}
+    end
+
+    test "parses with format-string '%m' with padding" do
+      assert Datix.strptime("02", "%0m") == {:ok, %{month: 2}}
+      assert Datix.strptime("02", "%-m") == {:ok, %{month: 2}}
+      assert Datix.strptime(" 2", "%_m") == {:ok, %{month: 2}}
     end
 
     # %M - Minute
 
     test "parses with format-string '%M'" do
       assert Datix.strptime("33", "%M") == {:ok, %{minute: 33}}
+      assert Datix.strptime("03", "%M") == {:ok, %{minute: 3}}
+      assert Datix.strptime("3", "%M") == {:ok, %{minute: 3}}
     end
 
     # %p - AM or PM
@@ -215,8 +230,7 @@ defmodule DatixTest do
     end
 
     test "returns error tuple for invalid value for modifier %S" do
-      assert Datix.strptime("9-", "%S") ==
-               {:error, %ParseError{reason: :invalid_integer, modifier: "%S"}}
+      assert Datix.strptime("9-", "%S") == {:error, %ParseError{reason: :invalid_input}}
     end
 
     # %u - Day of the week
@@ -252,14 +266,21 @@ defmodule DatixTest do
 
     test "parses with format-string '%y'" do
       assert Datix.strptime("12", "%y") == {:ok, %{year_2_digit: 12}}
+      assert Datix.strptime("02", "%y") == {:ok, %{year_2_digit: 02}}
     end
 
     test "parses with format-string '%y' and a negative year" do
       assert Datix.strptime("-12", "%y") == {:ok, %{year_2_digit: -12}}
+      assert Datix.strptime("-02", "%y") == {:ok, %{year_2_digit: -2}}
+    end
+
+    test "parses with format-string '%y' and a one-digit year" do
+      assert Datix.strptime("1", "%y") == {:ok, %{year_2_digit: 1}}
+      assert Datix.strptime("-1", "%y") == {:ok, %{year_2_digit: -1}}
     end
 
     test "returns error tuple for invalid value for modifier %y" do
-      assert Datix.strptime("1A", "%y") ==
+      assert Datix.strptime("A", "%y") ==
                {:error, %ParseError{reason: :invalid_integer, modifier: "%y"}}
     end
 
@@ -271,6 +292,16 @@ defmodule DatixTest do
 
     test "parses with format-string '%Y' and a negative year" do
       assert Datix.strptime("-1972", "%Y") == {:ok, %{year: -1972}}
+    end
+
+    test "returns an error with format-string '%Y' and less than 4 digits" do
+      assert Datix.strptime("-197", "%Y") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%Y"}}
+    end
+
+    test "returns an error with format-string '%Y' and only a minus" do
+      assert Datix.strptime("-", "%Y") ==
+               {:error, %ParseError{reason: :invalid_integer, modifier: "%Y"}}
     end
 
     # %z - +hhmm/-hhmm time zone offset from UTC
@@ -374,7 +405,7 @@ defmodule DatixTest do
 
     test "raises an error for an invalid integer" do
       assert_raise ParseError, "invalid integer for %d", fn ->
-        Datix.strptime!("1X", "%d")
+        Datix.strptime!("X", "%d")
       end
     end
 

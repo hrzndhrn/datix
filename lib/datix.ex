@@ -300,7 +300,8 @@ defmodule Datix do
 
   defp parse_date_time({format, padding, width} = modifier, date_time_str, _opts, acc)
        when format in 'dHIjmMqSu' do
-    with {:ok, value, rest} <- parse_pos_integer(date_time_str, padding, width),
+    with {:ok, value, rest} <-
+           parse_pos_integer(date_time_str, padding, width, _exact_width? = false),
          {:ok, new_acc} <- put(acc, format, value) do
       {:ok, new_acc, rest}
     else
@@ -310,7 +311,9 @@ defmodule Datix do
 
   defp parse_date_time({format, padding, width} = modifier, date_time_str, _opts, acc)
        when format in 'yY' do
-    with {:ok, value, rest} <- parse_integer(date_time_str, padding, width),
+    exact_width? = format == ?Y
+
+    with {:ok, value, rest} <- parse_integer(date_time_str, padding, width, exact_width?),
          {:ok, new_acc} <- put(acc, format, value) do
       {:ok, new_acc, rest}
     else
@@ -328,7 +331,8 @@ defmodule Datix do
   end
 
   defp parse_date_time({?z, padding, width} = modifier, date_time_str, _opts, acc) do
-    with {:ok, zone_offset, rest} <- parse_signed_integer(date_time_str, padding, width),
+    with {:ok, zone_offset, rest} <-
+           parse_signed_integer(date_time_str, padding, width, _exact_width? = true),
          {:ok, new_acc} <- put(acc, :zone_offset, zone_offset(zone_offset)) do
       {:ok, new_acc, rest}
     else
@@ -372,61 +376,70 @@ defmodule Datix do
     {:error, %FormatStringError{reason: {:invalid_modifier, modifier_to_string(modifier)}}}
   end
 
-  defp parse_integer(str, padding, width, int \\ nil)
+  defp parse_integer(str, padding, width, exact_width?, int \\ nil)
 
-  defp parse_integer("-" <> int_str, padding, width, nil) do
-    with {:ok, int, rest} <- parse_pos_integer(int_str, padding, width, 0) do
+  defp parse_integer("-" <> int_str, padding, width, exact_width?, nil) do
+    with {:ok, int, rest} <- parse_pos_integer(int_str, padding, width, exact_width?, nil) do
       {:ok, int * -1, rest}
     end
   end
 
-  defp parse_integer(int_str, padding, width, nil) do
-    parse_pos_integer(int_str, padding, width, nil)
+  defp parse_integer(int_str, padding, width, exact_width?, nil) do
+    parse_pos_integer(int_str, padding, width, exact_width?, nil)
   end
 
-  defp parse_pos_integer(str, int \\ nil)
-
-  defp parse_pos_integer(<<digit, rest::binary>>, int) when digit in ?0..?9 do
-    parse_pos_integer(rest, (int || 0) * 10 + (digit - ?0))
+  defp parse_pos_integer(str) do
+    case Integer.parse(str) do
+      {int, rest} -> {:ok, int, rest}
+      :error -> {:error, %ParseError{reason: :invalid_integer}}
+    end
   end
 
-  defp parse_pos_integer(_rest, nil), do: {:error, %ParseError{reason: :invalid_integer}}
+  defp parse_pos_integer(str, padding, max_width, exact_width?, int \\ nil)
 
-  defp parse_pos_integer(rest, int), do: {:ok, int, rest}
+  defp parse_pos_integer(rest, _padding, 0 = _width, _exact_width?, int) do
+    {:ok, int || 0, rest}
+  end
 
-  defp parse_pos_integer(str, padding, width, int \\ nil)
-
-  defp parse_pos_integer(rest, _padding, width, nil) when width < 1, do: {:ok, 0, rest}
-  defp parse_pos_integer(rest, _padding, width, int) when width < 1, do: {:ok, int, rest}
-
-  defp parse_pos_integer(<<digit, rest::binary>>, "" = padding, width, int)
+  defp parse_pos_integer(<<digit, rest::binary>>, "" = padding, width, exact_width?, int)
        when digit in ?0..?9 do
-    parse_pos_integer(rest, padding, width - 1, (int || 0) * 10 + (digit - ?0))
+    parse_pos_integer(rest, padding, width - 1, exact_width?, (int || 0) * 10 + (digit - ?0))
   end
 
-  defp parse_pos_integer(rest, "" = _padding, _width, int), do: {:ok, int, rest}
+  defp parse_pos_integer(rest, "" = _padding, _width, _exact_width?, int), do: {:ok, int, rest}
 
-  defp parse_pos_integer(<<padding, rest::binary>>, padding, width, nil = acc) do
-    parse_pos_integer(rest, padding, width - 1, acc)
+  defp parse_pos_integer(<<padding, rest::binary>>, padding, width, exact_width?, nil = acc) do
+    parse_pos_integer(rest, padding, width - 1, exact_width?, acc)
   end
 
-  defp parse_pos_integer(<<digit, rest::binary>>, padding, width, int) when digit in ?0..?9 do
-    parse_pos_integer(rest, padding, width - 1, (int || 0) * 10 + (digit - ?0))
+  defp parse_pos_integer(<<digit, rest::binary>>, padding, width, exact_width?, int)
+       when digit in ?0..?9 do
+    parse_pos_integer(rest, padding, width - 1, exact_width?, (int || 0) * 10 + (digit - ?0))
   end
 
-  defp parse_pos_integer(_str, _padding, _width, _int),
+  # If no integer was parsed yet when we get to a non-digit, then there was no integer,
+  # so we return an error.
+  defp parse_pos_integer(_str, _padding, _width, _exact_width?, nil),
     do: {:error, %ParseError{reason: :invalid_integer}}
 
-  defp parse_signed_integer("-" <> str, padding, width) do
-    with {:ok, value, rest} <- parse_pos_integer(str, padding, width) do
+  # If an integer was parsed then we can return it even if we have some "width" left,
+  # since the width represents the maximum width.
+  defp parse_pos_integer(str, _padding, _width_left, false = _exact_width?, int),
+    do: {:ok, int, str}
+
+  defp parse_pos_integer(_str, _padding, _width_left, true = _exact_width?, _int),
+    do: {:error, %ParseError{reason: :invalid_integer}}
+
+  defp parse_signed_integer("-" <> str, padding, width, exact_width?) do
+    with {:ok, value, rest} <- parse_pos_integer(str, padding, width, exact_width?) do
       {:ok, value * -1, rest}
     end
   end
 
-  defp parse_signed_integer("+" <> str, padding, width),
-    do: parse_pos_integer(str, padding, width)
+  defp parse_signed_integer("+" <> str, padding, width, exact_width?),
+    do: parse_pos_integer(str, padding, width, exact_width?)
 
-  defp parse_signed_integer(_str, _padding, _width),
+  defp parse_signed_integer(_str, _padding, _width, _exact_width?),
     do: {:error, %ParseError{reason: :invalid_integer}}
 
   defp parse_string(str, padding, list, pos \\ 0)
