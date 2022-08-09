@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 - 2022/08/09
+
++ Allow missing leading zeros in most integer modifiers.
+
 ## 0.3.0 - 2022/08/04
 
 ### Breaking changes
