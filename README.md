@@ -1,7 +1,7 @@
 # Datix
 [![Hex.pm: version](https://img.shields.io/hexpm/v/datix.svg?style=flat-square)](https://hex.pm/packages/datix)
 [![GitHub: CI status](https://img.shields.io/github/workflow/status/hrzndhrn/datix/CI?style=flat-square)](https://github.com/hrzndhrn/datix/actions)
-[![Coveralls: coverage](https://img.shields.io/coveralls/github/hrzndhrn/datix?style=flat-square)](https://coveralls.io/github/hrzndhrn/datix)
+[![Coveralls: coverage](https://img.shields.io/coverallsCoverage/github/hrzndhrn/datix?style=flat-square)](https://coveralls.io/github/hrzndhrn/datix)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://github.com/hrzndhrn/datix/blob/main/LICENSE.md)
 
 
