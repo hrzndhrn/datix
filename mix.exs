@@ -63,7 +63,7 @@ defmodule Datix.MixProject do
       {:ex_doc, "~> 0.25", only: :dev, runtime: false},
       {:excoveralls, "~> 0.13", only: :test, runtime: false},
       {:prove, "~> 0.1", only: [:dev, :test]},
-      {:recode, "~> 0.5", only: :dev},
+      {:recode, "~> 0.5", only: :dev}
     ]
   end
 end

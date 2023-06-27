@@ -11,7 +11,7 @@ alias Recode.Task
   # Can also be set/reset with "--verbose"/"--no-verbose".
   verbose: false,
   # Can be overwriten by calling `mix recode "lib/**/*.ex"`.
-  inputs: ["{apps,config,lib,test}/**/*.{ex,exs}"],
+  inputs: ["{mix,.formatter,.recode}.exs", "{config,lib,test}/**/*.{ex,exs}"],
   formatter: {Recode.Formatter, []},
   tasks: [
     # Tasks could be added by a tuple of the tasks module name and an options
@@ -22,7 +22,7 @@ alias Recode.Task
     {Task.EnforceLineLength, active: false},
     {Task.PipeFunOne, []},
     {Task.SinglePipe, []},
-    {Task.Specs, exclude: "test/**/*.{ex,exs}", config: [only: :visible]},
+    {Task.Specs, exclude: ["mix.exs", "test/**/*.{ex,exs}"], config: [only: :visible]},
     {Task.TestFileExt, []},
     {Task.UnusedVariable, active: false}
   ]
