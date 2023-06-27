@@ -3,7 +3,9 @@ defmodule Datix do
   A date-time parser using `Calendar.strftime/3` format strings.
   """
 
-  alias Datix.{FormatStringError, OptionError, ParseError}
+  alias Datix.FormatStringError
+  alias Datix.OptionError
+  alias Datix.ParseError
 
   @type t :: %{
           optional(:am_pm) => :am | :pm,

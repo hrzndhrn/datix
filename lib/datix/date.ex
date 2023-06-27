@@ -3,7 +3,8 @@ defmodule Datix.Date do
   A `Date` parser using `Calendar.strftime/3` format strings.
   """
 
-  alias Datix.{OptionError, ValidationError}
+  alias Datix.OptionError
+  alias Datix.ValidationError
 
   @doc """
   Parses a date string according to the given `format`.

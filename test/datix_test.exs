@@ -1,7 +1,8 @@
 defmodule DatixTest do
   use ExUnit.Case
 
-  alias Datix.{OptionError, ParseError}
+  alias Datix.OptionError
+  alias Datix.ParseError
 
   doctest Datix
 

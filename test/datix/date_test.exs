@@ -4,7 +4,8 @@ defmodule Datix.DateTest do
   import Prove
 
   alias Cldr.Calendar.Coptic
-  alias Datix.{OptionError, ValidationError}
+  alias Datix.OptionError
+  alias Datix.ValidationError
 
   doctest Datix.Date
 
