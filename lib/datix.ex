@@ -261,7 +261,7 @@ defmodule Datix do
   defp compile_modifier(<<format, rest::binary>>, padding, width) do
     modifier = {format, padding || default_padding(format), width || default_width(format)}
 
-    if format in 'aAbBpPcxXdHIjmMqSufzZyY%' do
+    if format in ~c"aAbBpPcxXdHIjmMqSufzZyY%" do
       {:ok, modifier, rest}
     else
       {:error, %FormatStringError{reason: {:invalid_modifier, modifier_to_string(modifier)}}}
@@ -291,7 +291,7 @@ defmodule Datix do
   end
 
   defp parse_date_time({format, padding, _width} = modifier, date_time_str, opts, acc)
-       when format in 'aAbBpP' do
+       when format in ~c"aAbBpP" do
     with {:ok, value, rest} <- parse_string(date_time_str, padding, enumeration(format, opts)),
          {:ok, new_acc} <- put(acc, format, value) do
       {:ok, new_acc, rest}
@@ -301,7 +301,7 @@ defmodule Datix do
   end
 
   defp parse_date_time({format, padding, width} = modifier, date_time_str, _opts, acc)
-       when format in 'dHIjmMqSu' do
+       when format in ~c"dHIjmMqSu" do
     with {:ok, value, rest} <-
            parse_pos_integer(date_time_str, padding, width, _exact_width? = false),
          {:ok, new_acc} <- put(acc, format, value) do
@@ -312,7 +312,7 @@ defmodule Datix do
   end
 
   defp parse_date_time({format, padding, width} = modifier, date_time_str, _opts, acc)
-       when format in 'yY' do
+       when format in ~c"yY" do
     exact_width? = format == ?Y
 
     with {:ok, value, rest} <- parse_integer(date_time_str, padding, width, exact_width?),
@@ -361,7 +361,7 @@ defmodule Datix do
   end
 
   defp parse_date_time({format, _padding, _width}, date_time_str, opts, acc)
-       when format in 'cxX' do
+       when format in ~c"cxX" do
     {:ok, %__MODULE__{format: compiled_format}} = compile(preferred_format(format, opts))
     parse(compiled_format, date_time_str, Map.put(opts, :preferred, format), acc)
   end
@@ -509,13 +509,13 @@ defmodule Datix do
     hour * 3600 + minute * 60
   end
 
-  defp default_padding(format) when format in 'aAbBpPZ', do: ?\s
+  defp default_padding(format) when format in ~c"aAbBpPZ", do: ?\s
   defp default_padding(_format), do: ?0
 
-  defp default_width(format) when format in 'Yz', do: 4
+  defp default_width(format) when format in ~c"Yz", do: 4
   defp default_width(?j), do: 3
-  defp default_width(format) when format in 'dHImMSy', do: 2
-  defp default_width(format) when format in 'qu', do: 1
+  defp default_width(format) when format in ~c"dHImMSy", do: 2
+  defp default_width(format) when format in ~c"qu", do: 1
   defp default_width(_format), do: 0
 
   defp put(acc, key, value) when is_atom(key) do
@@ -526,12 +526,12 @@ defmodule Datix do
     end
   end
 
-  defp put(acc, format, 1) when format in 'pP', do: put(acc, :am_pm, :am)
-  defp put(acc, format, 2) when format in 'pP', do: put(acc, :am_pm, :pm)
+  defp put(acc, format, 1) when format in ~c"pP", do: put(acc, :am_pm, :am)
+  defp put(acc, format, 2) when format in ~c"pP", do: put(acc, :am_pm, :pm)
   defp put(acc, format, value), do: put(acc, key(format), value)
 
-  defp key(format) when format in 'aA', do: :day_of_week
-  defp key(format) when format in 'bB', do: :month
+  defp key(format) when format in ~c"aA", do: :day_of_week
+  defp key(format) when format in ~c"bB", do: :month
   defp key(?d), do: :day
   defp key(?H), do: :hour
   defp key(?I), do: :hour_12
