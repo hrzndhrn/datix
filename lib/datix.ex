@@ -455,7 +455,7 @@ defmodule Datix do
   defp parse_string(str, padding, [item | list], pos) do
     case String.starts_with?(str, item) do
       false -> parse_string(str, padding, list, pos + 1)
-      true -> {:ok, pos + 1, String.slice(str, String.length(item)..-1)}
+      true -> {:ok, pos + 1, String.slice(str, String.length(item)..-1//1)}
     end
   end
 
