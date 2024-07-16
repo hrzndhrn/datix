@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2 - 2024/07/16
+
++ Fix range argument for `String.slice/2` to avoid warnings.
+
 ## 0.3.1 - 2022/08/09
 
 + Allow missing leading zeros in most integer modifiers.

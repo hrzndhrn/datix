@@ -6,7 +6,7 @@ defmodule Datix.MixProject do
   def project do
     [
       app: :datix,
-      version: "0.3.1",
+      version: "0.3.2",
       elixir: "~> 1.13",
       description: description(),
       source_url: @github,
