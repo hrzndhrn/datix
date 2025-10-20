@@ -12,10 +12,15 @@ defmodule Datix.MixProject do
       source_url: @github,
       start_permanent: Mix.env() == :prod,
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: preferred_cli_env(),
       dialyzer: dialyzer(),
       package: package(),
       deps: deps()
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: preferred_cli_env()
     ]
   end
 
