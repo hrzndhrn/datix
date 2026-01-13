@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3 - 2026/01/13
+
++ Fix warning for an unpined variable.
+
 ## 0.3.2 - 2024/07/16
 
 + Fix range argument for `String.slice/2` to avoid warnings.

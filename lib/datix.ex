@@ -282,7 +282,7 @@ defmodule Datix do
     expected_size = byte_size(exact)
 
     case date_time_str do
-      <<got::size(expected_size)-binary, date_time_rest::binary>> when got == exact ->
+      <<got::size(^expected_size)-binary, date_time_rest::binary>> when got == exact ->
         parse(format_rest, date_time_rest, opts, acc)
 
       _other ->
