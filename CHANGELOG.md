@@ -2,6 +2,7 @@
 
 ## 0.3.3 - 2026/01/13
 
++ Require Elixir 1.15 or later.
 + Fix warning for an unpined variable.
 
 ## 0.3.2 - 2024/07/16

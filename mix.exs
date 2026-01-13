@@ -7,7 +7,7 @@ defmodule Datix.MixProject do
     [
       app: :datix,
       version: "0.3.3",
-      elixir: "~> 1.13",
+      elixir: "~> 1.15",
       description: description(),
       source_url: @github,
       start_permanent: Mix.env() == :prod,
